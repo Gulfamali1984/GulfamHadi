@@ -167,6 +167,27 @@
       "defaultLeadTimeDays": 14,
       "createdAt": "2026-03-20",
       "updatedAt": "2026-10-09"
+    },
+    {
+      "id": "ITEM-009",
+      "sku": "METSEPM8243",
+      "oemPartNumber": "METSEPM8243",
+      "brand": "Industrial Spare",
+      "description": "SIMATIC S7-1500 CPU 1515-2 PN Central Processing Unit 3MB Program/Data Memory",
+      "category": "Spare Parts",
+      "condition": "Factory Sealed New",
+      "unit": "PCS",
+      "costPriceUSD": 77,
+      "sellingPriceUSD": 115.5,
+      "weightKg": 1,
+      "hsCode": "8537.10.91",
+      "countryOfOrigin": "USA",
+      "minSafetyStock": 2,
+      "reorderPoint": 4,
+      "targetStockLevel": 10,
+      "defaultLeadTimeDays": 14,
+      "createdAt": "2026-10-18",
+      "updatedAt": "2026-10-18"
     }
   ],
   "warehouses": [
@@ -304,6 +325,20 @@
       "totalCapacitySqM": 1500,
       "active": true,
       "binsCount": 150
+    },
+    {
+      "id": "WH-010",
+      "code": "DOHA",
+      "name": "Doha Main Store",
+      "country": "USA",
+      "city": "Doha",
+      "location": "Doha, Qatar",
+      "address": "Doha, Qatar Facility",
+      "managerName": "Majid Al-Thani",
+      "contactEmail": "ops.doha@realdeals-automation.com",
+      "contactPhone": "+1 (555) 000-0000",
+      "totalCapacitySqM": 1000,
+      "active": true
     }
   ],
   "suppliers": [
@@ -443,13 +478,13 @@
       "itemId": "ITEM-001",
       "warehouseId": "WH-001",
       "binLocation": "Shelf A-01",
-      "physicalStock": 5,
+      "physicalStock": 15,
       "reservedStock": 1,
-      "availableStock": 4,
+      "availableStock": 14,
       "inTransitStock": 0,
       "quarantinedStock": 0,
       "lastCountDate": "2026-10-15",
-      "updatedAt": "2026-10-15"
+      "updatedAt": "2026-10-18"
     },
     {
       "id": "INV-002",
@@ -508,13 +543,13 @@
       "itemId": "ITEM-002",
       "warehouseId": "WH-001",
       "binLocation": "Safe Vault-01",
-      "physicalStock": 3,
+      "physicalStock": 45,
       "reservedStock": 0,
-      "availableStock": 3,
+      "availableStock": 45,
       "inTransitStock": 1,
       "quarantinedStock": 0,
-      "lastCountDate": "2026-10-15",
-      "updatedAt": "2026-10-15"
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
     },
     {
       "id": "INV-007",
@@ -775,9 +810,156 @@
       "quarantinedStock": 0,
       "lastCountDate": "2026-10-10",
       "updatedAt": "2026-10-10"
+    },
+    {
+      "id": "INV-MVDIUH48",
+      "itemId": "ITEM-009",
+      "warehouseId": "WH-003",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 4,
+      "reservedStock": 0,
+      "availableStock": 4,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-501",
+      "itemId": "ITEM-001",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-715",
+      "itemId": "ITEM-002",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-88",
+      "itemId": "ITEM-003",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-590",
+      "itemId": "ITEM-004",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-20",
+      "itemId": "ITEM-005",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-574",
+      "itemId": "ITEM-006",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-489",
+      "itemId": "ITEM-007",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-828",
+      "itemId": "ITEM-008",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
+    },
+    {
+      "id": "INV-MVDJEDV1-545",
+      "itemId": "ITEM-009",
+      "warehouseId": "WH-010",
+      "binLocation": "Shelf A-01",
+      "physicalStock": 0,
+      "reservedStock": 0,
+      "availableStock": 0,
+      "inTransitStock": 0,
+      "quarantinedStock": 0,
+      "lastCountDate": "2026-10-18",
+      "updatedAt": "2026-10-18"
     }
   ],
   "incomingTransactions": [
+    {
+      "id": "INC-2026-0005",
+      "date": "2026-10-18",
+      "trackingNo": "1Z20D1126706275156",
+      "itemCode": "METSEPM8243",
+      "serialNumber": "ME-2506D968-03",
+      "warehouseId": "WH-003",
+      "warehouseCode": "SNT-UAE",
+      "warehouseName": "Regional Warehouse (SNT, UAE)",
+      "supplier": "SE",
+      "quantityReceived": 4,
+      "itemDescription": "SIMATIC S7-1500 CPU 1515-2 PN Central Processing Unit 3MB Program/Data Memory",
+      "unitCost": 77,
+      "totalCostUSD": 308,
+      "createdByUser": "Dawood Zafar",
+      "createdAt": "2026-10-18 07:46"
+    },
     {
       "id": "INC-2026-0001",
       "date": "2026-10-15",
@@ -787,11 +969,11 @@
       "warehouseId": "WH-001",
       "warehouseCode": "TLS-USA",
       "warehouseName": "Main Warehouse (TLS, USA)",
-      "supplier": "Hanseatic Automation GmbH",
-      "quantityReceived": 2,
+      "supplier": "Direct Rockwell Distributor",
+      "quantityReceived": 12,
       "itemDescription": "SIMATIC S7-1500 CPU 1515-2 PN Central Processing Unit",
-      "unitCost": 2450,
-      "totalCostUSD": 4900,
+      "unitCost": 2400,
+      "totalCostUSD": 28800,
       "createdByUser": "Imtiaz",
       "createdAt": "2026-10-15 14:22"
     },
@@ -908,6 +1090,25 @@
   ],
   "shipments": [
     {
+      "id": "SHP-MVDIUH48",
+      "trackingNumber": "1Z20D1126706275156",
+      "type": "Incoming",
+      "warehouseId": "WH-003",
+      "warehouseCode": "SNT-UAE",
+      "itemCode": "METSEPM8243",
+      "itemName": "SIMATIC S7-1500 CPU 1515-2 PN Central Processing Unit 3MB Program/Data Memory",
+      "serialNumber": "ME-2506D968-03",
+      "quantity": 4,
+      "party": "SE",
+      "poOrRef": "INC-2026-0005",
+      "date": "2026-10-18",
+      "carrier": "Inbound Carrier",
+      "status": "Delivered",
+      "notes": "Received at Regional Warehouse by Dawood Zafar",
+      "recordedBy": "Dawood Zafar",
+      "updatedAt": "2026-10-18 07:46"
+    },
+    {
       "id": "SHP-001",
       "trackingNumber": "TRK-DHL-9921827",
       "type": "Incoming",
@@ -916,15 +1117,15 @@
       "itemCode": "6ES7515-2AM02-0AB0",
       "itemName": "SIMATIC S7-1500 CPU 1515-2 PN",
       "serialNumber": "S-SIE-884102, S-SIE-884103",
-      "quantity": 2,
-      "party": "Hanseatic Automation GmbH",
+      "quantity": 12,
+      "party": "Direct Rockwell Distributor",
       "poOrRef": "PO-2026-0012",
       "date": "2026-10-15",
       "carrier": "DHL Express",
       "status": "Delivered",
       "notes": "Direct supplier delivery received and verified.",
       "recordedBy": "Imtiaz",
-      "updatedAt": "2026-10-15 14:30"
+      "updatedAt": "2026-10-18 08:01"
     },
     {
       "id": "SHP-002",
@@ -1072,6 +1273,71 @@
   ],
   "auditLogs": [
     {
+      "id": "LOG-MVDJEJ5O-287",
+      "timestamp": "2026-10-18 08:01:53",
+      "userId": "SYS",
+      "userName": "Admin",
+      "userRole": "Admin",
+      "action": "EDIT_WAREHOUSE",
+      "module": "Warehouses",
+      "entityType": "Warehouse",
+      "entityId": "WH-010",
+      "entityCode": "DOHA",
+      "details": "Modified store Doha Main Store (Doha, Qatar)"
+    },
+    {
+      "id": "LOG-MVDJEDV2-929",
+      "timestamp": "2026-10-18 08:01:46",
+      "userId": "SYS",
+      "userName": "Admin",
+      "userRole": "Admin",
+      "action": "ADD_WAREHOUSE",
+      "module": "Warehouses",
+      "entityType": "Warehouse",
+      "entityId": "WH-010",
+      "entityCode": "DOHA",
+      "details": "Added store Doha Central Store (Doha, Qatar), Manager: Majid"
+    },
+    {
+      "id": "LOG-MVDJE8R4-463",
+      "timestamp": "2026-10-18 08:01:40",
+      "userId": "SYS",
+      "userName": "Admin",
+      "userRole": "Admin",
+      "action": "EDIT_INCOMING",
+      "module": "Incoming Stock",
+      "entityType": "IncomingTransaction",
+      "entityId": "INC-2026-0001",
+      "entityCode": "TRK-DHL-9921827",
+      "details": "Edited incoming stock: Qty changed from 2 to 12 (Diff: +10). Unit Cost: $2400"
+    },
+    {
+      "id": "LOG-MVDJE65L-343",
+      "timestamp": "2026-10-18 08:01:36",
+      "userId": "SYS",
+      "userName": "Admin",
+      "userRole": "Admin",
+      "action": "SET_CLOSING_BALANCE",
+      "module": "Inventory",
+      "entityType": "InventoryRecord",
+      "entityId": "INV-006",
+      "entityCode": "1756-L83E",
+      "details": "Set closing balance for 1756-L83E at Main Warehouse to 45 (Previous: 3, Adj: +42). Notes: Opening count test"
+    },
+    {
+      "id": "LOG-MVDIUH49-755",
+      "timestamp": "2026-10-18 07:46:17",
+      "userId": "USR-001",
+      "userName": "Dawood Zafar",
+      "userRole": "Admin",
+      "action": "STOCK_INCOMING",
+      "module": "Incoming Stock",
+      "entityType": "IncomingTransaction",
+      "entityId": "INC-2026-0005",
+      "entityCode": "1Z20D1126706275156",
+      "details": "Received 4 units of METSEPM8243 into Regional Warehouse (SNT, UAE) from SE. Unit Cost: $77"
+    },
+    {
       "id": "LOG-001",
       "timestamp": "2026-10-17 08:30:00",
       "userId": "USR-001",
@@ -1085,7 +1351,38 @@
       "details": "Real Deals Procurement & Logistics Management ERP initialized with 9 stores."
     }
   ],
+  "purchaseOrders": [],
   "grn": [
+    {
+      "id": "INC-2026-0005",
+      "grnNumber": "INC-2026-0005",
+      "supplierId": "SUP-001",
+      "supplierName": "SE",
+      "warehouseId": "WH-003",
+      "warehouseCode": "SNT-UAE",
+      "receivedDate": "2026-10-18",
+      "receivedBy": "Dawood Zafar",
+      "status": "Accepted",
+      "deliveryDocketNumber": "1Z20D1126706275156",
+      "carrier": "Direct Freight",
+      "trackingNumber": "1Z20D1126706275156",
+      "items": [
+        {
+          "id": "GRNI-1792309577769",
+          "itemId": "ITEM-009",
+          "sku": "METSEPM8243",
+          "oemPartNumber": "METSEPM8243",
+          "quantityReceived": 4,
+          "quantityPassed": 4,
+          "quantityQuarantined": 0,
+          "binLocation": "Shelf A-01",
+          "serialNumbers": [
+            "ME-2506D968-03"
+          ],
+          "unitCost": 77
+        }
+      ]
+    },
     {
       "id": "INC-2026-0001",
       "grnNumber": "INC-2026-0001",

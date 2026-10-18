@@ -9,22 +9,19 @@ import {
   OutgoingStockTransaction,
   ShipmentRecord,
   User,
-  AuditLog,
-  GoodsReceiptNote,
-  OutgoingOrder
+  AuditLog
 } from '../types/erp';
 
 const BASE_URL = '/api';
 
 export const api = {
-  // System Health & Diagnostics
+  // System Health
   getHealth: async () => {
     const res = await fetch(`${BASE_URL}/health`);
-    if (!res.ok) throw new Error('Failed to fetch health');
     return res.json();
   },
 
-  // Authentication & Login
+  // Auth & Users
   login: async (email: string, password?: string): Promise<{ success: boolean; user?: User; message?: string }> => {
     const res = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
@@ -34,17 +31,16 @@ export const api = {
     return res.json();
   },
 
-  // User Management
   getUsers: async (): Promise<User[]> => {
     const res = await fetch(`${BASE_URL}/users`);
     return res.json();
   },
 
-  createUser: async (user: Partial<User>, currentUser?: User): Promise<User> => {
+  createUser: async (user: Partial<User> & { password?: string; currentUser?: User }): Promise<User> => {
     const res = await fetch(`${BASE_URL}/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...user, currentUser })
+      body: JSON.stringify(user)
     });
     if (!res.ok) {
       const err = await res.json();
@@ -53,13 +49,16 @@ export const api = {
     return res.json();
   },
 
-  updateUser: async (id: string, data: Partial<User>, currentUser?: User): Promise<User> => {
+  updateUser: async (id: string, updates: Partial<User> & { password?: string; currentUser?: User }): Promise<User> => {
     const res = await fetch(`${BASE_URL}/users/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, currentUser })
+      body: JSON.stringify(updates)
     });
-    if (!res.ok) throw new Error('Failed to update user');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update user');
+    }
     return res.json();
   },
 
@@ -81,18 +80,35 @@ export const api = {
     return res.json();
   },
 
-  // Warehouses
+  // Warehouses (Add & Edit)
   getWarehouses: async (): Promise<Warehouse[]> => {
     const res = await fetch(`${BASE_URL}/warehouses`);
     return res.json();
   },
 
-  updateWarehouse: async (id: string, data: Partial<Warehouse>): Promise<Warehouse> => {
+  createWarehouse: async (wh: Partial<Warehouse> & { currentUser?: User }): Promise<Warehouse> => {
+    const res = await fetch(`${BASE_URL}/warehouses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(wh)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create store');
+    }
+    return res.json();
+  },
+
+  updateWarehouse: async (id: string, data: Partial<Warehouse> & { currentUser?: User }): Promise<Warehouse> => {
     const res = await fetch(`${BASE_URL}/warehouses/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update store');
+    }
     return res.json();
   },
 
@@ -108,6 +124,23 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...item, currentUser })
     });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create item');
+    }
+    return res.json();
+  },
+
+  updateItem: async (id: string, data: Partial<Item>, currentUser?: User): Promise<Item> => {
+    const res = await fetch(`${BASE_URL}/items/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, currentUser })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update item');
+    }
     return res.json();
   },
 
@@ -134,9 +167,72 @@ export const api = {
     return res.json();
   },
 
-  // 4. Incoming Stock Transactions
-  getIncomingTransactions: async (): Promise<IncomingStockTransaction[]> => {
-    const res = await fetch(`${BASE_URL}/incoming`);
+  // Set Closing Balance (Stock Count for transitioning Google Sheet data)
+  setClosingBalance: async (data: {
+    warehouseId: string;
+    itemId: string;
+    closingBalance: number;
+    binLocation?: string;
+    notes?: string;
+    currentUser?: User;
+  }): Promise<{ success: boolean; message: string; inventory: InventoryRecord; adjustmentDifference: number }> => {
+    const res = await fetch(`${BASE_URL}/inventory/set-closing-balance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to set closing balance');
+    }
+    return res.json();
+  },
+
+  bulkSetClosingBalances: async (data: {
+    warehouseId: string;
+    balances: { itemId: string; closingBalance: number; binLocation?: string }[];
+    notes?: string;
+    currentUser?: User;
+  }): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${BASE_URL}/inventory/bulk-closing-balances`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to bulk update closing balances');
+    }
+    return res.json();
+  },
+
+  // Inter-warehouse transfer
+  transferStock: async (data: {
+    sourceWarehouseId: string;
+    destWarehouseId: string;
+    itemId: string;
+    quantity: number;
+    notes?: string;
+    currentUser?: User;
+  }) => {
+    const res = await fetch(`${BASE_URL}/inventory/transfer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to transfer stock');
+    }
+    return res.json();
+  },
+
+  // Incoming Stock Transactions (Create & Edit)
+  getIncomingTransactions: async (warehouseId?: string): Promise<IncomingStockTransaction[]> => {
+    const url = warehouseId && warehouseId !== 'ALL'
+      ? `${BASE_URL}/incoming?warehouseId=${encodeURIComponent(warehouseId)}`
+      : `${BASE_URL}/incoming`;
+    const res = await fetch(url);
     return res.json();
   },
 
@@ -163,9 +259,28 @@ export const api = {
     return res.json();
   },
 
-  // 5. Outgoing Stock Transactions
-  getOutgoingTransactions: async (): Promise<OutgoingStockTransaction[]> => {
-    const res = await fetch(`${BASE_URL}/outgoing`);
+  updateIncomingTransaction: async (
+    id: string,
+    updates: Partial<IncomingStockTransaction> & { currentUser?: User }
+  ): Promise<{ success: boolean; message: string; transaction: IncomingStockTransaction; inventory: InventoryRecord }> => {
+    const res = await fetch(`${BASE_URL}/incoming/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update incoming stock');
+    }
+    return res.json();
+  },
+
+  // Outgoing Stock Transactions (Create & Edit)
+  getOutgoingTransactions: async (warehouseId?: string): Promise<OutgoingStockTransaction[]> => {
+    const url = warehouseId && warehouseId !== 'ALL'
+      ? `${BASE_URL}/outgoing?warehouseId=${encodeURIComponent(warehouseId)}`
+      : `${BASE_URL}/outgoing`;
+    const res = await fetch(url);
     return res.json();
   },
 
@@ -196,9 +311,44 @@ export const api = {
     return res.json();
   },
 
-  // 6. Shipment Tracker
-  getShipments: async (): Promise<ShipmentRecord[]> => {
-    const res = await fetch(`${BASE_URL}/shipments`);
+  updateOutgoingTransaction: async (
+    id: string,
+    updates: Partial<OutgoingStockTransaction> & { isAdminOverride?: boolean; currentUser?: User }
+  ): Promise<{ success: boolean; message: string; transaction: OutgoingStockTransaction; inventory: InventoryRecord }> => {
+    const res = await fetch(`${BASE_URL}/outgoing/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      const error: any = new Error(err.message || err.error || 'Failed to update outgoing stock');
+      error.status = res.status;
+      error.details = err;
+      throw error;
+    }
+    return res.json();
+  },
+
+  // Shipment Tracker
+  getShipments: async (warehouseId?: string): Promise<ShipmentRecord[]> => {
+    const url = warehouseId && warehouseId !== 'ALL'
+      ? `${BASE_URL}/shipments?warehouseId=${encodeURIComponent(warehouseId)}`
+      : `${BASE_URL}/shipments`;
+    const res = await fetch(url);
+    return res.json();
+  },
+
+  updateShipment: async (id: string, data: Partial<ShipmentRecord> & { updatedBy?: string }): Promise<ShipmentRecord> => {
+    const res = await fetch(`${BASE_URL}/shipments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update shipment');
+    }
     return res.json();
   },
 
@@ -217,116 +367,62 @@ export const api = {
     return res.json();
   },
 
+  createSupplier: async (data: Partial<Supplier>, currentUser?: User): Promise<Supplier> => {
+    const res = await fetch(`${BASE_URL}/suppliers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, currentUser })
+    });
+    return res.json();
+  },
+
+  updateSupplier: async (id: string, data: Partial<Supplier>, currentUser?: User): Promise<Supplier> => {
+    const res = await fetch(`${BASE_URL}/suppliers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, currentUser })
+    });
+    return res.json();
+  },
+
   getCustomers: async (): Promise<Customer[]> => {
     const res = await fetch(`${BASE_URL}/customers`);
     return res.json();
   },
 
-  // Legacy GRN & Outgoing Order methods for backwards compatibility
-  getGRNList: async (): Promise<GoodsReceiptNote[]> => {
-    const res = await fetch(`${BASE_URL}/grn`);
-    return res.json();
-  },
-
-  createGRN: async (grn: any, currentUser?: User) => {
-    // Map to incoming
-    const item = grn.items?.[0];
-    return api.createIncomingTransaction({
-      date: grn.receivedDate || new Date().toISOString().slice(0, 10),
-      trackingNo: grn.deliveryDocketNumber || grn.trackingNumber || `TRK-IN-${Date.now()}`,
-      itemCode: item?.oemPartNumber || item?.sku || 'GENERIC-PART',
-      serialNumber: Array.isArray(item?.serialNumbers) ? item.serialNumbers.join(', ') : '',
-      warehouseId: grn.warehouseId,
-      supplier: grn.supplierName || 'Direct Supplier',
-      quantityReceived: item?.quantityReceived || 1,
-      itemDescription: item?.inspectionNotes || item?.oemPartNumber || 'Spare Part',
-      unitCost: item?.unitCost || 0
-    }, currentUser);
-  },
-
-  getOutgoingOrders: async (): Promise<OutgoingOrder[]> => {
-    const res = await fetch(`${BASE_URL}/outgoing-orders`);
-    return res.json();
-  },
-
-  createOutgoingOrder: async (order: any, currentUser?: User) => {
-    const item = order.items?.[0];
-    return api.createOutgoingTransaction({
-      dateIssued: order.orderDate || new Date().toISOString().slice(0, 10),
-      itemCode: item?.oemPartNumber || item?.sku || 'GENERIC-PART',
-      trackingNo: order.trackingNumber || `TRK-OUT-${Date.now()}`,
-      serialNumber: Array.isArray(item?.dispatchedSerialNumbers) ? item.dispatchedSerialNumbers.join(', ') : '',
-      warehouseId: order.warehouseId,
-      customerOrWarehouse: order.customerName || 'Customer Order',
-      quantityIssued: item?.quantity || 1,
-      poNumber: order.poNumber || 'PO-DIRECT',
-      itemDescription: item?.brand ? `${item.brand} ${item.oemPartNumber}` : (item?.oemPartNumber || 'Spare Part'),
-      isAdminOverride: false
-    }, currentUser);
-  },
-
-  // Google Sheets Management
-  testGoogleSheets: async (payload: { spreadsheetId: string; serviceAccountEmail: string; privateKey: string }) => {
-    const res = await fetch(`${BASE_URL}/database/test-google-sheets`, {
+  createCustomer: async (data: Partial<Customer>, currentUser?: User): Promise<Customer> => {
+    const res = await fetch(`${BASE_URL}/customers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ ...data, currentUser })
     });
     return res.json();
   },
 
-  setupGoogleSheetsSchema: async (payload?: { spreadsheetId?: string; serviceAccountEmail?: string; privateKey?: string }) => {
-    const res = await fetch(`${BASE_URL}/database/setup-sheets`, {
-      method: 'POST',
+  updateCustomer: async (id: string, data: Partial<Customer>, currentUser?: User): Promise<Customer> => {
+    const res = await fetch(`${BASE_URL}/customers/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {})
-    });
-    return res.json();
-  },
-
-  syncToGoogleSheets: async (payload?: { spreadsheetId?: string; serviceAccountEmail?: string; privateKey?: string }) => {
-    const res = await fetch(`${BASE_URL}/database/sync-to-sheets`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {})
-    });
-    return res.json();
-  },
-
-  getAppsScriptCode: async () => {
-    const res = await fetch(`${BASE_URL}/database/apps-script-code`);
-    return res.json();
-  },
-
-  getGoogleSheetsConfig: async () => {
-    const res = await fetch(`${BASE_URL}/database/config`);
-    return res.json();
-  },
-
-  saveGoogleSheetsConfig: async (config: any) => {
-    const res = await fetch(`${BASE_URL}/database/config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      body: JSON.stringify({ ...data, currentUser })
     });
     return res.json();
   },
 
   getAuditLogs: async (): Promise<AuditLog[]> => {
-    const res = await fetch(`${BASE_URL}/audit-logs`);
+    const res = await fetch(`${BASE_URL}/audit`);
     return res.json();
   },
 
-  resetDemoData: async () => {
-    const res = await fetch(`${BASE_URL}/database/reset-seed`, { method: 'POST' });
+  // Google Sheets
+  getGoogleSheetsConfig: async () => {
+    const res = await fetch(`${BASE_URL}/database/config`);
     return res.json();
   },
 
-  restoreBackupJson: async (backupData: any) => {
-    const res = await fetch(`${BASE_URL}/database/import-json`, {
+  syncToGoogleSheets: async () => {
+    const res = await fetch(`${BASE_URL}/database/sync-to-sheets`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(backupData)
+      headers: { 'Content-Type': 'application/json' }
     });
     return res.json();
   }

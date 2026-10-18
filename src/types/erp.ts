@@ -2,6 +2,7 @@ export type ItemCondition = 'Factory Sealed New' | 'New Open Box' | 'Used Tested
 
 export type UserRole =
   | 'Admin'
+  | 'Store Operator'
   | 'Warehouse Manager'
   | 'Staff'
   | 'Super Admin'

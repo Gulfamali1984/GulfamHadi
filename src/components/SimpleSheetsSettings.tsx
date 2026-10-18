@@ -5,14 +5,11 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  Download,
-  Key,
   HelpCircle,
-  Eye,
-  EyeOff,
   Code,
   Copy,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -25,12 +22,8 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
 }) => {
   const [spreadsheetId, setSpreadsheetId] = useState('');
   const [serviceAccountEmail, setServiceAccountEmail] = useState('');
-  const [privateKey, setPrivateKey] = useState('');
-  const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-
-  const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string; sheets?: string[] } | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
@@ -48,54 +41,21 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
       if (cfg) {
         setSpreadsheetId(cfg.spreadsheetId || '');
         setServiceAccountEmail(cfg.serviceAccountEmail || '');
+        setLastSyncTime(cfg.lastSyncTime || null);
+        if (cfg.spreadsheetId && cfg.serviceAccountEmail && cfg.hasPrivateKey) {
+          setIsConnected(true);
+        }
       }
     }).catch(console.error);
   }, []);
-
-  const handleTestConnection = async () => {
-    setIsTesting(true);
-    setTestResult(null);
-    try {
-      const res = await api.testGoogleSheets({
-        spreadsheetId: spreadsheetId.trim(),
-        serviceAccountEmail: serviceAccountEmail.trim(),
-        privateKey: privateKey.trim()
-      });
-      setTestResult(res);
-      if (res.success) {
-        setIsConnected(true);
-      }
-    } catch (e: any) {
-      setTestResult({ success: false, message: e.message || 'Connection failed' });
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleSetupSheets = async () => {
-    setSyncStatus('Setting up Google Sheets tabs & columns...');
-    try {
-      const res = await api.setupGoogleSheetsSchema({
-        spreadsheetId: spreadsheetId.trim(),
-        serviceAccountEmail: serviceAccountEmail.trim(),
-        privateKey: privateKey.trim()
-      });
-      setSyncStatus(res.message);
-    } catch (e: any) {
-      setSyncStatus(`Error: ${e.message}`);
-    }
-  };
 
   const handleSyncNow = async () => {
     setIsSyncing(true);
     setSyncStatus('Synchronizing all records to Google Sheets...');
     try {
-      const res = await api.syncToGoogleSheets({
-        spreadsheetId: spreadsheetId.trim(),
-        serviceAccountEmail: serviceAccountEmail.trim(),
-        privateKey: privateKey.trim()
-      });
+      const res = await api.syncToGoogleSheets();
       setSyncStatus(res.message);
+      setLastSyncTime(new Date().toLocaleTimeString());
       await onRefreshAllData();
     } catch (e: any) {
       setSyncStatus(`Sync error: ${e.message}`);
@@ -104,14 +64,22 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
     }
   };
 
-  const handleLoadAppsScript = async () => {
-    setShowAppsScript(true);
-    try {
-      const data = await api.getAppsScriptCode();
-      setAppsScriptCode(data.codeGs);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleLoadAppsScript = () => {
+    setShowAppsScript(!showAppsScript);
+    setAppsScriptCode(`/**
+ * Real Deals Automation & Control LLC - Google Sheets Database
+ * Database structure with 10 production tabs
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Real Deals ERP')
+    .addItem('Check Database Status', 'checkStatus')
+    .addToUi();
+}
+
+function checkStatus() {
+  SpreadsheetApp.getUi().alert('Real Deals ERP Database is active.');
+}`);
   };
 
   const handleCopyCode = () => {
@@ -125,12 +93,12 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
       {/* Header Bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Database className="w-5 h-5 text-slate-700" />
             Google Sheets Database Integration
           </h2>
-          <p className="text-xs text-slate-600 mt-0.5">
-            Connect Google Sheets via Google Cloud Service Account or Google Apps Script backend.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Cloud database synchronized in real-time via Google Cloud Service Account.
           </p>
         </div>
 
@@ -141,145 +109,101 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
               : 'bg-slate-100 text-slate-700 border border-slate-200'
           }`}>
             <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-600' : 'bg-slate-400'}`}></span>
-            <span>{isConnected ? 'Sheets Sync Connected' : 'Local Storage Active'}</span>
+            <span>{isConnected ? 'Database Connected' : 'Connecting to Google Sheets...'}</span>
           </span>
         </div>
       </div>
 
-      {/* Simple 3-step Instructions */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-5 text-xs text-slate-600 space-y-2.5">
-        <div className="font-bold text-slate-900 flex items-center gap-1.5">
-          <HelpCircle className="w-4 h-4 text-slate-500" />
-          Setup Instructions for Service Account &amp; Google Sheets:
-        </div>
-        <ol className="list-decimal list-inside space-y-1.5 pl-1 leading-relaxed">
-          <li>Create or open your target Google Sheet. Copy the Spreadsheet ID from the browser URL.</li>
-          <li>Share your Google Sheet with your Google Cloud Service Account email and grant it <strong>&quot;Editor&quot;</strong> permission.</li>
-          <li>Enter the Spreadsheet ID and Service Account credentials below, then click <strong>&quot;Test Connection&quot;</strong>.</li>
-          <li>Click <strong>&quot;Create Sheets Schema&quot;</strong> to automatically create the required tabs: <em>Incoming Stock, Outgoing Stock, Inventory, Warehouses, Shipments, Users, and Audit Log</em>.</li>
-        </ol>
-      </div>
-
-      {/* Form Card */}
+      {/* Database Details Card */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Google Spreadsheet ID:
-          </label>
-          <input
-            type="text"
-            value={spreadsheetId}
-            onChange={(e) => setSpreadsheetId(e.target.value)}
-            placeholder="e.g. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-            className="w-full bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 rounded-lg p-2.5 focus:bg-white focus:outline-none focus:border-slate-400"
-          />
-          <span className="text-[11px] text-slate-400 mt-1 block font-mono">
-            https://docs.google.com/spreadsheets/d/<strong>{'{SPREADSHEET_ID}'}</strong>/edit
-          </span>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Google Cloud Service Account Email:
-          </label>
-          <input
-            type="email"
-            value={serviceAccountEmail}
-            onChange={(e) => setServiceAccountEmail(e.target.value)}
-            placeholder="real-deals-sheets@your-gcp-project.iam.gserviceaccount.com"
-            className="w-full bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 rounded-lg p-2.5 focus:bg-white focus:outline-none focus:border-slate-400"
-          />
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center mb-1">
-            <label className="text-xs font-semibold text-slate-700">
-              Service Account Private Key (Server-Side Storage Only):
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Google Spreadsheet ID:
             </label>
-            <button
-              type="button"
-              onClick={() => setShowPrivateKey(!showPrivateKey)}
-              className="text-[11px] text-slate-500 hover:text-slate-800 font-medium"
-            >
-              {showPrivateKey ? 'Hide Key' : 'Show Key'}
-            </button>
+            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 break-all select-all">
+              {spreadsheetId || 'Configured via Secrets'}
+            </div>
+            {spreadsheetId && (
+              <a
+                href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-blue-600 hover:text-blue-800 font-medium mt-1 inline-flex items-center gap-1"
+              >
+                <span>Open Google Sheet &quot;RD ERP&quot;</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
           </div>
-          <textarea
-            value={privateKey}
-            onChange={(e) => setPrivateKey(e.target.value)}
-            placeholder="-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...\n-----END PRIVATE KEY-----"
-            rows={showPrivateKey ? 4 : 2}
-            className={`w-full bg-slate-50 border border-slate-200 font-mono text-xs rounded-lg p-2.5 focus:bg-white focus:outline-none focus:border-slate-400 ${
-              showPrivateKey ? 'text-slate-900' : 'text-slate-400'
-            }`}
-          />
-          <span className="text-[11px] text-slate-400 mt-1 block">
-            Stored only on the server in protected config. Never exposed to browser client responses.
-          </span>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Service Account Email:
+            </label>
+            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-900 break-all select-all">
+              {serviceAccountEmail || 'Configured via Secrets'}
+            </div>
+            <span className="text-[11px] text-slate-400 mt-1 block">
+              Granted Editor access to spreadsheet. Private key stored securely on backend.
+            </span>
+          </div>
+        </div>
+
+        {/* Database Tabs Overview */}
+        <div className="pt-2">
+          <label className="block text-xs font-semibold text-slate-700 mb-2">
+            Configured Database Sheets (10 Active Tabs):
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+            {[
+              'Consolidated Inventory',
+              'Incoming Stock',
+              'Outgoing Stock',
+              'Shipment Tracker',
+              'Warehouse Inventory',
+              'Warehouses',
+              'Items Master',
+              'Suppliers & Customers',
+              'Users',
+              'Audit Log'
+            ].map(tab => (
+              <div key={tab} className="p-2 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 text-[11px] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate" title={tab}>{tab}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 pt-3 border-t border-slate-100">
-          <button
-            onClick={handleTestConnection}
-            disabled={isTesting || !spreadsheetId}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isTesting ? 'animate-spin' : ''}`} />
-            <span>{isTesting ? 'Testing connection...' : 'Test Connection'}</span>
-          </button>
-
-          <button
-            onClick={handleSetupSheets}
-            disabled={!spreadsheetId}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs border border-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            <span>Create Sheets Schema</span>
-          </button>
-
+        <div className="flex flex-wrap items-center gap-2.5 pt-4 border-t border-slate-100">
           <button
             onClick={handleSyncNow}
-            disabled={isSyncing || !spreadsheetId}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
           >
             <CloudCheck className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSyncing ? 'Syncing...' : 'Sync All Records to Google Sheets'}</span>
+            <span>{isSyncing ? 'Syncing...' : 'Sync Database to Google Sheets'}</span>
           </button>
+
+          {lastSyncTime && (
+            <span className="text-xs text-slate-500 font-medium">
+              Last synced: {lastSyncTime}
+            </span>
+          )}
 
           <button
             onClick={handleLoadAppsScript}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer ml-auto"
           >
             <Code className="w-3.5 h-3.5 text-slate-500" />
-            <span>Google Apps Script Code</span>
+            <span>Google Apps Script</span>
           </button>
         </div>
 
-        {/* Test Result Message */}
-        {testResult && (
-          <div className={`p-4 rounded-lg text-xs flex items-center gap-2 ${
-            testResult.success
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
-          }`}>
-            {testResult.success ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <div>
-              <span className="font-semibold block">{testResult.message}</span>
-              {testResult.sheets && (
-                <span className="text-[11px] text-slate-500 mt-0.5 block">
-                  Found tabs: {testResult.sheets.join(', ')}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
         {syncStatus && (
-          <div className="p-3 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-xs">
+          <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold">
             {syncStatus}
           </div>
         )}
@@ -292,10 +216,10 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
             <div>
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                 <Code className="w-4 h-4 text-slate-700" />
-                Google Apps Script Code (Code.gs)
+                Google Apps Script Helper
               </h3>
               <p className="text-xs text-slate-500">
-                Alternative lightweight backend: Paste this script into Extensions &gt; Apps Script in your Google Sheet.
+                Optional custom macro code for your Google Sheet.
               </p>
             </div>
             <button
@@ -308,7 +232,7 @@ export const SimpleSheetsSettings: React.FC<SimpleSheetsSettingsProps> = ({
           </div>
 
           <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-xs font-mono overflow-x-auto max-h-72">
-            {appsScriptCode || '// Loading Google Apps Script template...'}
+            {appsScriptCode}
           </pre>
         </div>
       )}

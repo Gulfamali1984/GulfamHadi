@@ -28,10 +28,18 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
   currentUser,
   onUpdateShipmentStatus
 }) => {
+  const isAdmin = currentUser.role === 'Admin';
+  const assignedWhId = currentUser.assignedWarehouseId;
+
   const [activeTypeTab, setActiveTypeTab] = useState<'ALL' | 'Incoming' | 'Outgoing'>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [storeFilter, setStoreFilter] = useState('ALL');
+  const [storeFilter, setStoreFilter] = useState(!isAdmin && assignedWhId ? assignedWhId : 'ALL');
+
+  // Strict store isolation for non-admins
+  const scopedShipments = !isAdmin && assignedWhId
+    ? shipments.filter(s => s.warehouseId === assignedWhId)
+    : shipments;
 
   // Edit status modal state
   const [editingShipment, setEditingShipment] = useState<ShipmentRecord | null>(null);
@@ -39,9 +47,9 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
   const [statusNotes, setStatusNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const filteredShipments = shipments.filter(s => {
+  const filteredShipments = scopedShipments.filter(s => {
     const matchesType = activeTypeTab === 'ALL' || s.type === activeTypeTab;
-    const matchesStore = storeFilter === 'ALL' || s.warehouseId === storeFilter;
+    const matchesStore = !isAdmin ? true : (storeFilter === 'ALL' || s.warehouseId === storeFilter);
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
 
     // Search by Tracking No., Item Code, Serial Number, PO, supplier, customer, or date
@@ -157,7 +165,7 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          All Shipments ({shipments.length})
+          All Shipments ({scopedShipments.length})
         </button>
 
         <button
@@ -169,7 +177,7 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
           }`}
         >
           <ArrowDownToLine className="w-3.5 h-3.5" />
-          <span>Incoming Shipments ({shipments.filter(s => s.type === 'Incoming').length})</span>
+          <span>Incoming Shipments ({scopedShipments.filter(s => s.type === 'Incoming').length})</span>
         </button>
 
         <button
@@ -181,7 +189,7 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
           }`}
         >
           <ArrowUpFromLine className="w-3.5 h-3.5" />
-          <span>Outgoing Shipments ({shipments.filter(s => s.type === 'Outgoing').length})</span>
+          <span>Outgoing Shipments ({scopedShipments.filter(s => s.type === 'Outgoing').length})</span>
         </button>
       </div>
 
@@ -214,18 +222,25 @@ export const SimpleShipmentTracker: React.FC<SimpleShipmentTrackerProps> = ({
           </select>
 
           {/* Store Filter */}
-          <select
-            value={storeFilter}
-            onChange={(e) => setStoreFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-slate-400"
-          >
-            <option value="ALL">All Warehouses</option>
-            {warehouses.map(w => (
-              <option key={w.id} value={w.id}>
-                {w.id} ({w.code})
-              </option>
-            ))}
-          </select>
+          {isAdmin ? (
+            <select
+              value={storeFilter}
+              onChange={(e) => setStoreFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-slate-400"
+            >
+              <option value="ALL">All Warehouses</option>
+              {warehouses.map(w => (
+                <option key={w.id} value={w.id}>
+                  {w.id} ({w.code})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-semibold rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+              <Building2 className="w-3 h-3 text-blue-600" />
+              <span>Assigned Store Only ({assignedWhId})</span>
+            </div>
+          )}
         </div>
       </div>
 

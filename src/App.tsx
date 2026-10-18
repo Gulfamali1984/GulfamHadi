@@ -362,6 +362,7 @@ export default function App() {
               await api.createIncomingTransaction(data, currentUser);
               await refreshAllData();
             }}
+            onRefreshData={refreshAllData}
             prefillStoreId={selectedStoreId !== 'ALL' ? selectedStoreId : undefined}
           />
         )}
@@ -379,16 +380,35 @@ export default function App() {
               await api.createOutgoingTransaction(data, currentUser);
               await refreshAllData();
             }}
+            onRefreshData={refreshAllData}
             prefillStoreId={selectedStoreId !== 'ALL' ? selectedStoreId : undefined}
           />
         )}
 
         {/* Tab 4: Consolidated Inventory (All 9 Stores Combined) */}
         {activeTab === 'consolidated' && (
-          <SimpleConsolidated
-            consolidatedInventory={consolidatedInventory}
-            warehouses={warehouses}
-          />
+          currentUser.role === 'Admin' ? (
+            <SimpleConsolidated
+              consolidatedInventory={consolidatedInventory}
+              warehouses={warehouses}
+            />
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center max-w-lg mx-auto my-12 shadow-xs">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-700 mx-auto flex items-center justify-center mb-3">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">Store Isolated Mode Active</h3>
+              <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                As a Store Operator, cross-store consolidated inventory is restricted. You can only view and operate your assigned warehouse facility.
+              </p>
+              <button
+                onClick={() => setActiveTab('store_by_store')}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                Go to My Store Inventory
+              </button>
+            </div>
+          )
         )}
 
         {/* Tab 5: Each Store Separately (9 Warehouses) */}
@@ -411,6 +431,7 @@ export default function App() {
               await api.updateInventoryRecord(invId, { binLocation: newBin });
               await refreshAllData();
             }}
+            onRefreshData={refreshAllData}
             currentUser={currentUser}
           />
         )}
@@ -434,12 +455,9 @@ export default function App() {
             users={users}
             warehouses={warehouses}
             currentUser={currentUser}
+            onRefreshUsers={refreshAllData}
             onCreateUser={async (userData) => {
-              await api.createUser(userData, currentUser);
-              await refreshAllData();
-            }}
-            onUpdateUser={async (id, data) => {
-              await api.updateUser(id, data, currentUser);
+              await api.createUser({ ...userData, currentUser });
               await refreshAllData();
             }}
             onChangePassword={async (id, newPass) => {

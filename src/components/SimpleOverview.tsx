@@ -48,19 +48,52 @@ export const SimpleOverview: React.FC<SimpleOverviewProps> = ({
   onSelectSpecificStore,
   currentUser
 }) => {
-  // Calculations
+  const isAdmin = currentUser.role === 'Admin';
+  const assignedWhId = currentUser.assignedWarehouseId;
+
+  // Filter for store operator isolation
+  const scopedIncoming = !isAdmin && assignedWhId
+    ? incomingTransactions.filter(inc => inc.warehouseId === assignedWhId)
+    : incomingTransactions;
+
+  const scopedOutgoing = !isAdmin && assignedWhId
+    ? outgoingTransactions.filter(out => out.warehouseId === assignedWhId)
+    : outgoingTransactions;
+
+  const scopedWarehouses = !isAdmin && assignedWhId
+    ? warehouses.filter(w => w.id === assignedWhId)
+    : warehouses;
+
+  // Calculations scoped by role
   const totalItemsCount = items.length;
-  const totalPhysicalUnits = consolidatedInventory.reduce((acc, c) => acc + c.totalPhysical, 0);
-  const totalIncomingUnits = incomingTransactions.reduce((acc, c) => acc + c.quantityReceived, 0);
-  const totalOutgoingUnits = outgoingTransactions.reduce((acc, c) => acc + c.quantityIssued, 0);
-  const totalValuationUSD = consolidatedInventory.reduce((acc, c) => acc + c.totalValuationUSD, 0);
+  const totalPhysicalUnits = !isAdmin && assignedWhId
+    ? consolidatedInventory.reduce((acc, c) => {
+        const b = c.warehouseBreakdown.find(wb => wb.warehouseId === assignedWhId);
+        return acc + (b?.physical || 0);
+      }, 0)
+    : consolidatedInventory.reduce((acc, c) => acc + c.totalPhysical, 0);
+
+  const totalIncomingUnits = scopedIncoming.reduce((acc, c) => acc + c.quantityReceived, 0);
+  const totalOutgoingUnits = scopedOutgoing.reduce((acc, c) => acc + c.quantityIssued, 0);
+
+  const totalValuationUSD = !isAdmin && assignedWhId
+    ? consolidatedInventory.reduce((acc, c) => {
+        const b = c.warehouseBreakdown.find(wb => wb.warehouseId === assignedWhId);
+        return acc + ((b?.physical || 0) * c.item.costPriceUSD);
+      }, 0)
+    : consolidatedInventory.reduce((acc, c) => acc + c.totalValuationUSD, 0);
 
   // Low stock / Out of stock items
-  const lowStockItems = consolidatedInventory.filter(ci => ci.isLowStock || ci.totalAvailable <= 0);
+  const lowStockItems = !isAdmin && assignedWhId
+    ? consolidatedInventory.filter(ci => {
+        const b = ci.warehouseBreakdown.find(wb => wb.warehouseId === assignedWhId);
+        return b && (b.available <= 0 || b.physical <= ci.item.minSafetyStock);
+      })
+    : consolidatedInventory.filter(ci => ci.isLowStock || ci.totalAvailable <= 0);
 
   // Combined recent transactions (last 8)
   const combinedRecent = [
-    ...incomingTransactions.map(inc => ({
+    ...scopedIncoming.map(inc => ({
       id: inc.id,
       type: 'INCOMING' as const,
       date: inc.date,
@@ -74,7 +107,7 @@ export const SimpleOverview: React.FC<SimpleOverviewProps> = ({
       user: inc.createdByUser,
       timestamp: inc.createdAt
     })),
-    ...outgoingTransactions.map(out => ({
+    ...scopedOutgoing.map(out => ({
       id: out.id,
       type: 'OUTGOING' as const,
       date: out.dateIssued,
@@ -214,13 +247,13 @@ export const SimpleOverview: React.FC<SimpleOverviewProps> = ({
             onClick={() => onSelectTab('store_by_store')}
             className="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
           >
-            <span>View All Stores</span>
+            <span>{isAdmin ? 'View All Stores' : 'Go to My Store'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {warehouses.map((wh) => {
+          {scopedWarehouses.map((wh) => {
             // Calculate total units in this warehouse
             const whUnits = consolidatedInventory.reduce((acc, ci) => {
               const b = ci.warehouseBreakdown.find(wb => wb.warehouseId === wh.id);

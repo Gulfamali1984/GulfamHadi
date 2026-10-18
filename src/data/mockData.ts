@@ -153,7 +153,7 @@ export const INITIAL_WAREHOUSES: Warehouse[] = [
   }
 ];
 
-// 2. Initial Users with Roles: Admin, Warehouse Manager, Staff
+// 2. Initial Users with Roles: Admin, Warehouse Manager, Staff (All 9 Warehouses)
 export const INITIAL_USERS: User[] = [
   {
     id: 'USR-001',
@@ -163,7 +163,7 @@ export const INITIAL_USERS: User[] = [
     password: 'admin',
     department: 'Executive Operations',
     active: true,
-    lastLogin: '2026-10-17 10:45'
+    lastLogin: '2026-10-18 09:45'
   },
   {
     id: 'USR-002',
@@ -171,10 +171,10 @@ export const INITIAL_USERS: User[] = [
     email: 'imtiaz.tls@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
-    department: 'TLS Warehouse Operations',
+    department: 'TLS Operations',
     assignedWarehouseId: 'WH-001',
     active: true,
-    lastLogin: '2026-10-17 09:15'
+    lastLogin: '2026-10-18 08:30'
   },
   {
     id: 'USR-003',
@@ -182,10 +182,10 @@ export const INITIAL_USERS: User[] = [
     email: 'anoop.toll@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
-    department: 'TOLL Warehouse Operations',
+    department: 'TOLL Operations',
     assignedWarehouseId: 'WH-002',
     active: true,
-    lastLogin: '2026-10-17 08:30'
+    lastLogin: '2026-10-18 08:45'
   },
   {
     id: 'USR-004',
@@ -193,10 +193,10 @@ export const INITIAL_USERS: User[] = [
     email: 'santhosh.snt@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
-    department: 'SNT Warehouse Operations',
+    department: 'SNT Operations',
     assignedWarehouseId: 'WH-003',
     active: true,
-    lastLogin: '2026-10-17 09:50'
+    lastLogin: '2026-10-18 07:50'
   },
   {
     id: 'USR-005',
@@ -204,21 +204,65 @@ export const INITIAL_USERS: User[] = [
     email: 'denial.bflo@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
-    department: 'BFLO Warehouse Operations',
+    department: 'BFLO Operations',
     assignedWarehouseId: 'WH-004',
     active: true,
-    lastLogin: '2026-10-16 17:20'
+    lastLogin: '2026-10-17 18:20'
   },
   {
     id: 'USR-006',
-    name: 'Tariq',
-    email: 'tariq.nmk@realdeals.com',
-    role: 'Staff',
+    name: 'John Miller',
+    email: 'john.usa@realdeals.com',
+    role: 'Warehouse Manager',
     password: 'password',
-    department: 'NMK Store Inventory',
+    department: 'USA Regional Store',
+    assignedWarehouseId: 'WH-005',
+    active: true,
+    lastLogin: '2026-10-18 07:10'
+  },
+  {
+    id: 'USR-007',
+    name: 'Noorisha',
+    email: 'noorisha.nmk@realdeals.com',
+    role: 'Warehouse Manager',
+    password: 'password',
+    department: 'NMK Operations',
     assignedWarehouseId: 'WH-006',
     active: true,
-    lastLogin: '2026-10-17 08:00'
+    lastLogin: '2026-10-18 09:10'
+  },
+  {
+    id: 'USR-008',
+    name: 'Store In-Charge',
+    email: 'ajman.store@realdeals.com',
+    role: 'Warehouse Manager',
+    password: 'password',
+    department: 'Ajman Operations',
+    assignedWarehouseId: 'WH-007',
+    active: true,
+    lastLogin: '2026-10-17 15:30'
+  },
+  {
+    id: 'USR-009',
+    name: 'Gulfam',
+    email: 'gulfam.pak@realdeals.com',
+    role: 'Warehouse Manager',
+    password: 'password',
+    department: 'PAK Operations',
+    assignedWarehouseId: 'WH-008',
+    active: true,
+    lastLogin: '2026-10-18 08:15'
+  },
+  {
+    id: 'USR-010',
+    name: 'Asif',
+    email: 'asif.ksa@realdeals.com',
+    role: 'Warehouse Manager',
+    password: 'password',
+    department: 'KSA Operations',
+    assignedWarehouseId: 'WH-009',
+    active: true,
+    lastLogin: '2026-10-18 09:00'
   }
 ];
 

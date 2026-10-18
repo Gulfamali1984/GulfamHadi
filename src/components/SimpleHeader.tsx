@@ -219,17 +219,19 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             <span>Outgoing Stock</span>
           </button>
 
-          <button
-            onClick={() => onSelectTab('consolidated')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ${
-              activeTab === 'consolidated'
-                ? 'bg-slate-100 text-slate-900 font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-slate-600" />
-            <span>Consolidated Stock</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => onSelectTab('consolidated')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ${
+                activeTab === 'consolidated'
+                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-slate-600" />
+              <span>Consolidated Stock</span>
+            </button>
+          )}
 
           <button
             onClick={() => onSelectTab('store_by_store')}
@@ -240,7 +242,7 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             }`}
           >
             <Building2 className="w-3.5 h-3.5 text-slate-600" />
-            <span>Store by Store</span>
+            <span>{isAdmin ? 'Store by Store' : 'My Store Inventory'}</span>
           </button>
 
           <button
@@ -269,20 +271,22 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             </button>
           )}
 
-          <button
-            onClick={() => onSelectTab('sheets_sync')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ml-auto ${
-              activeTab === 'sheets_sync'
-                ? 'bg-slate-100 text-slate-900 font-bold'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5 text-slate-500" />
-            <span>Google Sheets</span>
-            {googleSheetsConnected && (
-              <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block ml-0.5" title="Connected" />
-            )}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => onSelectTab('sheets_sync')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ml-auto ${
+                activeTab === 'sheets_sync'
+                  ? 'bg-slate-100 text-slate-900 font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <Database className="w-3.5 h-3.5 text-slate-500" />
+              <span>Google Sheets</span>
+              {googleSheetsConnected && (
+                <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block ml-0.5" title="Connected" />
+              )}
+            </button>
+          )}
         </nav>
       </div>
     </header>

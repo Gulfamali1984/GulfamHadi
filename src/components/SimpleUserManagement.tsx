@@ -1,69 +1,111 @@
 import React, { useState } from 'react';
 import {
   Users,
-  Plus,
   Shield,
   Key,
+  Mail,
+  Building2,
   CheckCircle2,
   XCircle,
-  Building2,
-  Mail,
-  UserCheck,
-  AlertTriangle,
+  Plus,
+  Edit2,
   X,
-  Edit2
+  UserCheck,
+  Search,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import { User, Warehouse, UserRole } from '../types/erp';
+import { api } from '../services/api';
 
 interface SimpleUserManagementProps {
   users: User[];
   warehouses: Warehouse[];
   currentUser: User;
-  onCreateUser: (user: Partial<User>) => Promise<void>;
-  onUpdateUser: (id: string, data: Partial<User>) => Promise<void>;
-  onChangePassword: (id: string, newPass: string) => Promise<void>;
-  onToggleStatus: (id: string, active: boolean) => Promise<void>;
+  onRefreshUsers: () => Promise<void>;
+  onCreateUser: (data: {
+    name: string;
+    email: string;
+    role: UserRole;
+    password?: string;
+    assignedWarehouseId?: string;
+    department?: string;
+  }) => Promise<void>;
+  onToggleStatus: (userId: string, active: boolean) => Promise<void>;
+  onChangePassword: (userId: string, newPass: string) => Promise<void>;
 }
 
 export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
   users,
   warehouses,
   currentUser,
+  onRefreshUsers,
   onCreateUser,
-  onUpdateUser,
-  onChangePassword,
-  onToggleStatus
+  onToggleStatus,
+  onChangePassword
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [passwordModalUser, setPasswordModalUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  // Form State for new user
+  // Create Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('password');
-  const [role, setRole] = useState<UserRole>('Warehouse Manager');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('Staff');
   const [assignedWarehouseId, setAssignedWarehouseId] = useState(warehouses[0]?.id || 'WH-001');
   const [department, setDepartment] = useState('Warehouse Operations');
-  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+
+  // Edit Form State
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRole, setEditRole] = useState<UserRole>('Staff');
+  const [editAssignedWhId, setEditAssignedWhId] = useState('');
+  const [editDept, setEditDept] = useState('');
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+
+  const filteredUsers = users.filter(u => {
+    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.department && u.department.toLowerCase().includes(q)) ||
+      (u.assignedWarehouseId && u.assignedWarehouseId.toLowerCase().includes(q));
+    return matchesRole && matchesSearch;
+  });
 
   const handleOpenCreateModal = () => {
     setName('');
     setEmail('');
-    setPassword('password');
-    setRole('Warehouse Manager');
+    setPassword('');
+    setRole('Staff');
     setAssignedWarehouseId(warehouses[0]?.id || 'WH-001');
     setDepartment('Warehouse Operations');
-    setFormError('');
+    setFormError(null);
     setShowCreateModal(true);
+  };
+
+  const handleOpenEditModal = (u: User) => {
+    setEditingUser(u);
+    setEditName(u.name);
+    setEditEmail(u.email);
+    setEditRole(u.role);
+    setEditAssignedWhId(u.assignedWarehouseId || warehouses[0]?.id || 'WH-001');
+    setEditDept(u.department || 'Warehouse Operations');
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError('');
-    if (!name.trim() || !email.trim()) {
-      setFormError('Name and email are required.');
+    setFormError(null);
+
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setFormError('Please fill in all required fields.');
       return;
     }
 
@@ -71,9 +113,9 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
     try {
       await onCreateUser({
         name: name.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
         role,
-        password: password.trim() || 'password',
         assignedWarehouseId: role === 'Admin' ? undefined : assignedWarehouseId,
         department: department.trim()
       });
@@ -82,6 +124,29 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
       setFormError(err.message || 'Failed to create user');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    setIsUpdatingUser(true);
+    try {
+      await api.updateUser(editingUser.id, {
+        name: editName.trim(),
+        email: editEmail.trim().toLowerCase(),
+        role: editRole,
+        assignedWarehouseId: editRole === 'Admin' ? undefined : editAssignedWhId,
+        department: editDept.trim(),
+        currentUser
+      });
+      setEditingUser(null);
+      await onRefreshUsers();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update user');
+    } finally {
+      setIsUpdatingUser(false);
     }
   };
 
@@ -106,12 +171,12 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
       {/* Header bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-slate-700" />
-            User Accounts &amp; Role-Based Access Control
+            User Management &amp; Store Operator Roles
           </h2>
-          <p className="text-xs text-slate-600 mt-0.5">
-            Manage user accounts, assign roles (Admin, Warehouse Manager, Staff), restrict store access, and change passwords.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Assign store operators to specific warehouses so they only see their store and cannot access other stores.
           </p>
         </div>
 
@@ -132,7 +197,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
             <Shield className="w-4 h-4 text-slate-700" />
           </div>
           <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
-            Full system authority. Manages users, changes passwords, configures Google Sheets, approves negative stock dispatches, and accesses all 9 warehouses.
+            Full system authority. Manages all users, adds stores, configures Google Sheets, approves negative stock, and accesses all warehouses.
           </p>
         </div>
 
@@ -142,116 +207,149 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
             <Building2 className="w-4 h-4 text-slate-700" />
           </div>
           <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
-            Responsible for assigned store operations. Can receive and dispatch stock within their designated warehouse, manage bin storage, and track shipments.
+            Responsible for assigned store operations. Manages stock, incoming receipts, dispatches, and counts for their assigned warehouse.
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs border-l-4 border-l-blue-600">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-900">Warehouse Staff</span>
-            <UserCheck className="w-4 h-4 text-slate-700" />
+            <span className="text-xs font-bold text-slate-900">Store Operator / Staff</span>
+            <Lock className="w-4 h-4 text-blue-600" />
           </div>
           <p className="text-[11px] text-slate-600 mt-2 leading-relaxed">
-            Performs daily stock movements, scans serial numbers, logs goods receipt notes, and prepares outbound shipments for assigned stores.
+            <strong className="text-slate-800">Strictly Isolated:</strong> Cannot switch stores or view other warehouse stock, transactions, or activities. Locked exclusively to their assigned store.
           </p>
         </div>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search user name, email, department..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium focus:outline-none"
+            >
+              <option value="ALL">All Roles</option>
+              <option value="Admin">Admin (All Stores)</option>
+              <option value="Store Operator">Store Operator (Isolated)</option>
+              <option value="Warehouse Manager">Warehouse Manager</option>
+              <option value="Staff">Staff</option>
+            </select>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-              <tr>
-                <th className="py-3 px-4">User</th>
-                <th className="py-3 px-4">Role</th>
-                <th className="py-3 px-4">Assigned Warehouse</th>
-                <th className="py-3 px-4">Department</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4">Last Login</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                <th className="py-3 px-3.5">User Details</th>
+                <th className="py-3 px-3.5">Role</th>
+                <th className="py-3 px-3.5">Assigned Warehouse (Scope)</th>
+                <th className="py-3 px-3.5">Department</th>
+                <th className="py-3 px-3.5">Status</th>
+                <th className="py-3 px-3.5">Last Login</th>
+                <th className="py-3 px-3.5 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map((u) => {
-                const wh = warehouses.find(w => w.id === u.assignedWarehouseId);
-                const isCurrent = u.id === currentUser.id;
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {filteredUsers.map((u) => {
+                const assignedWh = warehouses.find(w => w.id === u.assignedWarehouseId);
 
                 return (
-                  <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                        <span>{u.name}</span>
-                        {isCurrent && (
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-900 text-white font-normal">
-                            You
-                          </span>
-                        )}
+                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-3.5">
+                      <div className="font-bold text-slate-900">{u.name}</div>
+                      <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1 mt-0.5">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        {u.email}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono">{u.email}</div>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         u.role === 'Admin'
-                          ? 'bg-slate-900 text-white'
+                          ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                          : u.role === 'Store Operator'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
                           : u.role === 'Warehouse Manager'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-slate-100 text-slate-700'
+                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-800 border border-slate-200'
                       }`}>
+                        {u.role === 'Store Operator' && <Lock className="w-2.5 h-2.5" />}
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
                       {u.role === 'Admin' ? (
-                        <span className="text-slate-600 font-medium">All 9 Stores (Admin Access)</span>
-                      ) : wh ? (
-                        <span className="font-medium text-slate-900">
-                          {wh.id}: {wh.name} ({wh.location})
-                        </span>
+                        <span className="text-slate-500 font-medium">All Warehouses (Global)</span>
+                      ) : assignedWh ? (
+                        <div className="flex items-center gap-1 font-semibold text-slate-800">
+                          <Building2 className="w-3 h-3 text-blue-600" />
+                          <span>{assignedWh.name} ({assignedWh.code})</span>
+                          <span className="text-[10px] text-slate-400 ml-1 font-normal">[{assignedWh.location}]</span>
+                        </div>
                       ) : (
-                        <span className="text-slate-400">Unassigned</span>
+                        <span className="text-amber-600 font-medium">Not Assigned</span>
                       )}
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap text-slate-600">
-                      {u.department || 'Operations'}
+                    <td className="py-3 px-3.5 text-slate-600 whitespace-nowrap">
+                      {u.department || '—'}
                     </td>
-                    <td className="py-3 px-4 text-center whitespace-nowrap">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        u.active
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
-                      }`}>
-                        {u.active ? 'Active' : 'Deactivated'}
-                      </span>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <button
+                        onClick={() => onToggleStatus(u.id, !u.active)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors cursor-pointer ${
+                          u.active
+                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                        }`}
+                        title="Click to toggle account activation"
+                      >
+                        {u.active ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Active</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 text-rose-600" />
+                            <span>Deactivated</span>
+                          </>
+                        )}
+                      </button>
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap text-slate-500 font-mono text-[11px]">
+                    <td className="py-3 px-3.5 text-slate-500 whitespace-nowrap text-[11px] font-mono">
                       {u.lastLogin || 'Never'}
                     </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap space-x-1.5">
-                      <button
-                        onClick={() => {
-                          setPasswordModalUser(u);
-                          setNewPassword('');
-                        }}
-                        className="px-2 py-1 text-xs font-semibold rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors inline-flex items-center gap-1"
-                        title="Change Password"
-                      >
-                        <Key className="w-3 h-3 text-slate-500" />
-                        <span>Password</span>
-                      </button>
-
-                      {!isCurrent && (
+                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
-                          onClick={() => onToggleStatus(u.id, !u.active)}
-                          className={`px-2 py-1 text-xs font-semibold rounded border transition-colors ${
-                            u.active
-                              ? 'border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700'
-                              : 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                          }`}
+                          onClick={() => handleOpenEditModal(u)}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors"
+                          title="Edit user details and store assignment"
                         >
-                          {u.active ? 'Deactivate' : 'Activate'}
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                        <button
+                          onClick={() => setPasswordModalUser(u)}
+                          className="p-1 rounded hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors"
+                          title="Change password"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -268,7 +366,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">Create New User Account</h3>
-                <p className="text-xs text-slate-500">Add operational user and assign store permissions</p>
+                <p className="text-xs text-slate-500">Configure role and store assignment</p>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -287,7 +385,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
             <form onSubmit={handleCreateSubmit} className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Full Name:
+                  Full Name *:
                 </label>
                 <input
                   type="text"
@@ -301,7 +399,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Email Address:
+                  Email Address *:
                 </label>
                 <input
                   type="email"
@@ -315,7 +413,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Password:
+                  Password *:
                 </label>
                 <input
                   type="password"
@@ -330,18 +428,28 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
-                    Role:
+                    Role *:
                   </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value as UserRole)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none"
                   >
-                    <option value="Admin">Admin</option>
+                    <option value="Admin">Admin (All Stores & System Control)</option>
+                    <option value="Store Operator">Store Operator (Strictly Isolated to Assigned Store)</option>
                     <option value="Warehouse Manager">Warehouse Manager</option>
                     <option value="Staff">Staff</option>
                   </select>
                 </div>
+
+                {role === 'Store Operator' && (
+                  <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[11px] text-blue-800 flex items-start gap-2">
+                    <Lock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                    <span>
+                      <strong>Strict Store Isolation:</strong> This operator will only be able to view and manage their assigned store. All other stores' inventory, incoming shipments, and outgoing dispatches will be completely hidden from their view.
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-xs font-semibold text-slate-700 block mb-1">
@@ -355,12 +463,18 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
                   >
                     {warehouses.map(w => (
                       <option key={w.id} value={w.id}>
-                        {w.id} ({w.location})
+                        {w.code} - {w.name} ({w.location})
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+
+              {role !== 'Admin' && (
+                <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-[11px] text-blue-900">
+                  <strong>Store Isolation Active:</strong> This user will only be able to view and manage inventory, incoming stock, and dispatches for this assigned store.
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
@@ -370,7 +484,7 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
                   type="text"
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="e.g. Warehouse Operations"
+                  placeholder="e.g. Store Operations"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:bg-white focus:outline-none"
                 />
               </div>
@@ -389,6 +503,128 @@ export const SimpleUserManagement: React.FC<SimpleUserManagementProps> = ({
                   className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Edit User Account</h3>
+                <p className="text-xs text-slate-500">{editingUser.email}</p>
+              </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Full Name:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Email Address:
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Role:
+                  </label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as UserRole)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-900 focus:bg-white focus:outline-none"
+                  >
+                    <option value="Admin">Admin (All Stores)</option>
+                    <option value="Store Operator">Store Operator (Strictly Isolated to Assigned Store)</option>
+                    <option value="Warehouse Manager">Warehouse Manager</option>
+                    <option value="Staff">Staff</option>
+                  </select>
+                </div>
+
+                {editRole === 'Store Operator' && (
+                  <div className="col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-[11px] text-blue-800 flex items-start gap-2">
+                    <Lock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
+                    <span>
+                      <strong>Strict Store Isolation:</strong> This operator can only view, manage and operate their assigned store.
+                    </span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">
+                    Assigned Store:
+                  </label>
+                  <select
+                    value={editAssignedWhId}
+                    onChange={(e) => setEditAssignedWhId(e.target.value)}
+                    disabled={editRole === 'Admin'}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:bg-white focus:outline-none disabled:opacity-50"
+                  >
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>
+                        {w.code} - {w.name} ({w.location})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Department:
+                </label>
+                <input
+                  type="text"
+                  value={editDept}
+                  onChange={(e) => setEditDept(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingUser}
+                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {isUpdatingUser ? 'Saving...' : 'Save User Details'}
                 </button>
               </div>
             </form>
