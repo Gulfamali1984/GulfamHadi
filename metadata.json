@@ -1,0 +1,6 @@
+{
+  "name": "Real Deals ERP - Procurement & Logistics",
+  "description": "Enterprise Procurement, Multi-Warehouse Inventory, Serial Tracking, and Logistics ERP for Industrial Automation & Spare Parts with Google Sheets sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
