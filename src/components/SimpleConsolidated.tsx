@@ -8,7 +8,9 @@ import {
   Package,
   Boxes,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  UploadCloud,
+  Plus
 } from 'lucide-react';
 import { ConsolidatedInventoryItem, Warehouse } from '../types/erp';
 
@@ -16,12 +18,16 @@ interface SimpleConsolidatedProps {
   consolidatedInventory: ConsolidatedInventoryItem[];
   warehouses: Warehouse[];
   onQuickReceivePart?: (itemId: string) => void;
+  onOpenBulkUpload?: () => void;
+  onOpenCreateItem?: () => void;
 }
 
 export const SimpleConsolidated: React.FC<SimpleConsolidatedProps> = ({
   consolidatedInventory,
   warehouses,
-  onQuickReceivePart
+  onQuickReceivePart,
+  onOpenBulkUpload,
+  onOpenCreateItem
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [brandFilter, setBrandFilter] = useState('ALL');
@@ -95,13 +101,36 @@ export const SimpleConsolidated: React.FC<SimpleConsolidatedProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <Download className="w-4 h-4 text-slate-500" />
-          <span>Export Consolidated CSV</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {onOpenBulkUpload && (
+            <button
+              onClick={onOpenBulkUpload}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              title="Upload 2,000+ items with closing balances"
+            >
+              <UploadCloud className="w-4 h-4 text-emerald-300" />
+              <span>+ Bulk Upload Items &amp; Balances</span>
+            </button>
+          )}
+
+          {onOpenCreateItem && (
+            <button
+              onClick={onOpenCreateItem}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Create New Item</span>
+            </button>
+          )}
+
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>Export CSV</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Stats Bar */}

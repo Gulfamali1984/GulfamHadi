@@ -412,6 +412,23 @@
         "Mitsubishi Electric"
       ],
       "active": true
+    },
+    {
+      "id": "SUP-005",
+      "code": "YOKO",
+      "name": "Yokogawa Middle East",
+      "contactPerson": "Tariq Hasan",
+      "email": "orders@supplier.com",
+      "phone": "",
+      "country": "Bahrain",
+      "city": "Direct",
+      "address": "",
+      "paymentTerms": "Net 30 Days",
+      "currency": "USD",
+      "specialtyBrands": [
+        "Industrial Equipment"
+      ],
+      "active": true
     }
   ],
   "customers": [
@@ -467,6 +484,20 @@
       "country": "United States",
       "city": "Midland, MI",
       "shippingAddress": "Plant Gate 8, Stores Bldg 44, Midland, MI 48674",
+      "paymentTerms": "Net 30 Days",
+      "currency": "USD",
+      "active": true
+    },
+    {
+      "id": "CUST-005",
+      "code": "SAUD",
+      "companyName": "Saudi Petrochem Direct",
+      "contactPerson": "Saleh Al-Ghamdi",
+      "email": "purchasing@client.com",
+      "phone": "",
+      "country": "Saudi Arabia",
+      "city": "Direct",
+      "shippingAddress": "Client Receiving Dock",
       "paymentTerms": "Net 30 Days",
       "currency": "USD",
       "active": true
@@ -1269,9 +1300,90 @@
       "assignedWarehouseId": "WH-006",
       "active": true,
       "lastLogin": "2026-10-17 08:00"
+    },
+    {
+      "id": "USR-006",
+      "name": "John Miller",
+      "email": "john.usa@realdeals.com",
+      "role": "Warehouse Manager",
+      "password": "password",
+      "department": "USA Regional Store",
+      "assignedWarehouseId": "WH-005",
+      "active": true,
+      "lastLogin": "2026-10-18 07:10"
+    },
+    {
+      "id": "USR-007",
+      "name": "Noorisha",
+      "email": "noorisha.nmk@realdeals.com",
+      "role": "Warehouse Manager",
+      "password": "password",
+      "department": "NMK Operations",
+      "assignedWarehouseId": "WH-006",
+      "active": true,
+      "lastLogin": "2026-10-18 09:10"
+    },
+    {
+      "id": "USR-008",
+      "name": "Store In-Charge",
+      "email": "ajman.store@realdeals.com",
+      "role": "Warehouse Manager",
+      "password": "password",
+      "department": "Ajman Operations",
+      "assignedWarehouseId": "WH-007",
+      "active": true,
+      "lastLogin": "2026-10-17 15:30"
+    },
+    {
+      "id": "USR-009",
+      "name": "Gulfam",
+      "email": "gulfam.pak@realdeals.com",
+      "role": "Warehouse Manager",
+      "password": "password",
+      "department": "PAK Operations",
+      "assignedWarehouseId": "WH-008",
+      "active": true,
+      "lastLogin": "2026-10-18 08:15"
+    },
+    {
+      "id": "USR-010",
+      "name": "Asif",
+      "email": "asif.ksa@realdeals.com",
+      "role": "Warehouse Manager",
+      "password": "password",
+      "department": "KSA Operations",
+      "assignedWarehouseId": "WH-009",
+      "active": true,
+      "lastLogin": "2026-10-18 09:00"
     }
   ],
   "auditLogs": [
+    {
+      "id": "LOG-MVEYBXVU-198",
+      "timestamp": "2026-10-19 07:47:33",
+      "userId": "SYS",
+      "userName": "System User",
+      "userRole": "Admin",
+      "action": "BULK_ADD_SUPPLIERS",
+      "module": "Suppliers",
+      "entityType": "Supplier",
+      "entityId": "BULK",
+      "entityCode": "MULTIPLE",
+      "details": "Bulk imported 1 suppliers into directory"
+    },
+    {
+      "id": "LOG-MVEYBQQT-379",
+      "timestamp": "2026-10-19 07:47:23",
+      "userId": "SYS",
+      "userName": "System User",
+      "userRole": "Admin",
+      "action": "BULK_ADD_CUSTOMERS",
+      "module": "Customers",
+      "entityType": "Customer",
+      "entityId": "BULK",
+      "entityCode": "MULTIPLE",
+      "details": "Bulk imported 1 customers into directory"
+    },
     {
       "id": "LOG-MVDJEJ5O-287",
       "timestamp": "2026-10-18 08:01:53",

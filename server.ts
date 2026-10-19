@@ -212,6 +212,42 @@ function logAudit(
   return newLog;
 }
 
+const REQUIRED_SHEETS_TABS = [
+  'Consolidated Inventory',
+  'Incoming Stock',
+  'Outgoing Stock',
+  'Shipment Tracker',
+  'Warehouse Inventory',
+  'Warehouses',
+  'Items Master',
+  'Suppliers & Customers',
+  'Users',
+  'Audit Log'
+];
+
+function getEffectiveSheetsConfig(): GoogleSheetsSettings {
+  let email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL || process.env.AUTHORIZED_SERVICE_ACCOUNT_EMAIL || process.env.CLIENT_EMAIL || gSheetsConfig.serviceAccountEmail || '';
+  let key = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY || process.env.PRIVATE_KEY || gSheetsConfig.privateKey || '';
+  let spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID || process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID || gSheetsConfig.spreadsheetId || '';
+
+  const rawJsonCandidate = process.env.GOOGLE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS || '';
+  if (rawJsonCandidate && (!email || !key)) {
+    try {
+      const parsed = JSON.parse(rawJsonCandidate);
+      if (parsed.client_email) email = parsed.client_email;
+      if (parsed.private_key) key = parsed.private_key;
+    } catch {}
+  }
+
+  return {
+    spreadsheetId: spreadsheetId.trim(),
+    serviceAccountEmail: email.trim(),
+    privateKey: key,
+    autoSync: true,
+    lastSyncTime: gSheetsConfig.lastSyncTime
+  };
+}
+
 // Google Sheets Client via Service Account
 async function getGoogleSheetsClient(email: string, privateKey: string) {
   const cleanedKey = normalizePrivateKey(privateKey);
@@ -224,19 +260,80 @@ async function getGoogleSheetsClient(email: string, privateKey: string) {
   return client;
 }
 
-// Background sync helper
+// Ensure all required tabs exist in Google Sheets; create missing ones automatically
+async function ensureAllGoogleSheetsTabs(token: string, spreadsheetId: string) {
+  try {
+    const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const meta = await metaRes.json();
+    if (!meta || !meta.sheets) {
+      console.warn('[Google Sheets] Metadata lookup warning:', meta?.error?.message || meta);
+      return;
+    }
+
+    const existingSheetTitles = meta.sheets.map((s: any) => s.properties.title);
+    const existingSet = new Set(existingSheetTitles);
+    const missingTabs = REQUIRED_SHEETS_TABS.filter(t => !existingSet.has(t));
+
+    if (missingTabs.length > 0) {
+      console.log(`[Google Sheets] Automatically creating ${missingTabs.length} missing tabs in spreadsheet:`, missingTabs);
+      const requests = missingTabs.map(title => ({
+        addSheet: {
+          properties: {
+            title,
+            gridProperties: {
+              rowCount: 2000,
+              columnCount: 26,
+              frozenRowCount: 1
+            }
+          }
+        }
+      }));
+
+      const addRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ requests })
+      });
+      const addData = await addRes.json();
+      if (addData.error) {
+        console.warn('[Google Sheets] Warning when creating missing tabs:', addData.error.message);
+      } else {
+        console.log(`[Google Sheets] Successfully created ${missingTabs.length} tabs in spreadsheet!`);
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Google Sheets] Exception during ensureAllGoogleSheetsTabs:', err.message);
+  }
+}
+
+// Background sync helper - automatically ensures tabs exist and syncs all ERP data
 async function syncAllToGoogleSheets() {
-  const sId = gSheetsConfig.spreadsheetId;
-  const email = gSheetsConfig.serviceAccountEmail;
-  const key = gSheetsConfig.privateKey;
-  if (!sId || !email || !key) return;
+  const cfg = getEffectiveSheetsConfig();
+  const sId = cfg.spreadsheetId;
+  const email = cfg.serviceAccountEmail;
+  const key = cfg.privateKey;
+  if (!sId || !email || !key) {
+    return;
+  }
 
   try {
     const authClient = await getGoogleSheetsClient(email, key);
     const token = await authClient.getAccessToken();
+    if (!token.token) {
+      console.warn('[Google Sheets] Unable to acquire access token');
+      return;
+    }
+
+    // 0. Automatically create any missing tabs in the Google Spreadsheet
+    await ensureAllGoogleSheetsTabs(token.token, sId);
 
     // 1. Consolidated Inventory
-    const consolidatedHeader = ['Price', 'Last Updated', 'Sr. No.', 'TLS Formula', 'Item', 'Total', 'Make', 'Condition', 'TLS', 'TOLL', 'BFLO', 'NMK', 'PAK', 'KSA', 'SNT', 'USA', 'Ajman'];
+    const consolidatedHeader = ['Price (USD)', 'Last Updated', 'Sr. No.', 'Formula Total', 'OEM Part Number', 'Physical Stock Total', 'Brand / Make', 'Condition', 'TLS Store', 'TOLL Store', 'BFLO Store', 'NMK Store', 'PAK Store', 'KSA Store', 'SNT Store', 'USA Store', 'Ajman Store'];
     const consolidatedRows = db.items.map((item, idx) => {
       const invs = db.inventory.filter(i => i.itemId === item.id);
       const total = invs.reduce((s, i) => s + i.physicalStock, 0);
@@ -269,7 +366,7 @@ async function syncAllToGoogleSheets() {
 
     // 2. Incoming Stock
     const incomingData = [
-      ['Date', 'Tracking No.', 'Item Code', 'Serial Number', 'Warehouse', 'Supplier', 'Quantity Received', 'Item Name / Description', 'Unit Cost', 'Total Cost', 'Recorded By'],
+      ['Date', 'Tracking No.', 'OEM Part Code', 'Serial Number', 'Warehouse', 'Supplier', 'Quantity Received', 'Item Description', 'Unit Cost (USD)', 'Total Cost (USD)', 'Recorded By'],
       ...db.incomingTransactions.map(inc => [
         inc.date, inc.trackingNo, inc.itemCode, inc.serialNumber, inc.warehouseName, inc.supplier, inc.quantityReceived, inc.itemDescription, inc.unitCost, inc.totalCostUSD, inc.createdByUser
       ])
@@ -277,7 +374,7 @@ async function syncAllToGoogleSheets() {
 
     // 3. Outgoing Stock
     const outgoingData = [
-      ['Date Issued', 'Item Code', 'Tracking No.', 'Serial Number', 'Warehouse', 'Customer / Warehouse', 'Quantity Issued', 'PO', 'Item Name / Description', 'Total Price', 'Recorded By'],
+      ['Date Issued', 'OEM Part Code', 'Tracking No.', 'Serial Number', 'Warehouse', 'Recipient Customer / Warehouse', 'Quantity Issued', 'PO Number', 'Item Description', 'Total Price (USD)', 'Recorded By'],
       ...db.outgoingTransactions.map(out => [
         out.dateIssued, out.itemCode, out.trackingNo, out.serialNumber, out.warehouseName, out.customerOrWarehouse, out.quantityIssued, out.poNumber, out.itemDescription, out.totalPriceUSD, out.createdByUser
       ])
@@ -285,7 +382,7 @@ async function syncAllToGoogleSheets() {
 
     // 4. Shipment Tracker
     const shipmentsData = [
-      ['Tracking No.', 'Type', 'Date', 'Warehouse', 'Item Code', 'Item Name', 'Serial Number', 'Quantity', 'Supplier / Customer', 'PO', 'Carrier', 'Status', 'Recorded By'],
+      ['Tracking No.', 'Type', 'Date', 'Warehouse', 'Item Code', 'Item Name', 'Serial Number', 'Quantity', 'Supplier / Customer', 'PO / Ref', 'Carrier', 'Status', 'Recorded By'],
       ...db.shipments.map(s => [s.trackingNumber, s.type, s.date, s.warehouseCode, s.itemCode, s.itemName, s.serialNumber, s.quantity, s.party, s.poOrRef, s.carrier, s.status, s.recordedBy])
     ];
 
@@ -318,36 +415,53 @@ async function syncAllToGoogleSheets() {
 
     // 6. Warehouses
     const warehousesData = [
-      ['Warehouse ID', 'Warehouse Name', 'Location', 'Manager', 'Status'],
-      ...db.warehouses.map(w => [w.id, w.name, w.location, w.managerName, w.active ? 'Active' : 'Inactive'])
+      ['Warehouse ID', 'Warehouse Code', 'Warehouse Name', 'Location', 'City', 'Country', 'Manager', 'Status'],
+      ...db.warehouses.map(w => [w.id, w.code, w.name, w.location, w.city, w.country, w.managerName, w.active ? 'Active' : 'Inactive'])
     ];
 
     // 7. Items Master
     const itemsData = [
-      ['Item Code', 'Item Name', 'Description', 'Make', 'Condition', 'Price', 'Serial Number Req.', 'Reorder Level'],
-      ...db.items.map(i => [i.oemPartNumber, i.brand, i.description, i.brand, i.condition, i.costPriceUSD, 'Yes', i.minSafetyStock])
+      ['Item Code', 'Brand / Make', 'Description', 'Category', 'Condition', 'Price (USD)', 'Selling Price (USD)', 'Reorder Level', 'Min Safety Stock'],
+      ...db.items.map(i => [i.oemPartNumber, i.brand, i.description, i.category || 'General', i.condition, i.costPriceUSD, i.sellingPriceUSD, i.reorderPoint || i.minSafetyStock, i.minSafetyStock])
     ];
 
     // 8. Suppliers & Customers
     const contactsData = [
-      ['Type', 'Name', 'Contact Person', 'Email', 'Phone', 'Address'],
-      ...db.suppliers.map(s => ['Supplier', s.name, s.contactPerson, s.email, s.phone, s.country]),
-      ...db.customers.map(c => ['Customer', c.companyName, c.contactPerson, c.email, c.phone, c.shippingAddress])
+      ['Type', 'Company Name', 'Contact Person', 'Email', 'Phone', 'Address / Country', 'Payment Terms', 'Currency'],
+      ...db.suppliers.map(s => ['Supplier', s.name, s.contactPerson, s.email, s.phone, s.country, s.paymentTerms, s.currency]),
+      ...db.customers.map(c => ['Customer', c.companyName, c.contactPerson, c.email, c.phone, c.shippingAddress || c.country, c.paymentTerms, c.currency])
     ];
 
     // 9. Users
     const usersData = [
-      ['User ID', 'Name', 'Email', 'Role', 'Assigned Warehouse', 'Status', 'Last Login'],
-      ...db.users.map(u => [u.id, u.name, u.email, u.role, u.assignedWarehouseId || 'All Stores', u.active ? 'Active' : 'Inactive', u.lastLogin || ''])
+      ['User ID', 'Name', 'Email', 'Role', 'Assigned Warehouse', 'Department', 'Status', 'Last Login'],
+      ...db.users.map(u => [u.id, u.name, u.email, u.role, u.assignedWarehouseId || 'All Stores', u.department || 'Operations', u.active ? 'Active' : 'Inactive', u.lastLogin || ''])
     ];
 
     // 10. Audit Log
     const auditData = [
       ['Timestamp', 'User', 'Role', 'Action', 'Module', 'Entity Code', 'Details'],
-      ...db.auditLogs.slice(0, 100).map(a => [a.timestamp, a.userName, a.userRole, a.action, a.module, a.entityCode, a.details])
+      ...db.auditLogs.slice(0, 200).map(a => [a.timestamp, a.userName, a.userRole, a.action, a.module, a.entityCode, a.details])
     ];
 
-    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sId)}/values:batchUpdate`, {
+    // Clear existing ranges to avoid orphaned/stale rows
+    try {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sId)}/values:batchClear`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ranges: REQUIRED_SHEETS_TABS.map(t => `'${t}'!A1:Z5000`)
+        })
+      });
+    } catch (clearErr: any) {
+      console.warn('[Google Sheets] Non-fatal batchClear warning:', clearErr.message);
+    }
+
+    // Write freshly populated data to all 10 tabs
+    const updateRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sId)}/values:batchUpdate`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token.token}`,
@@ -370,22 +484,29 @@ async function syncAllToGoogleSheets() {
       })
     });
 
-    gSheetsConfig.lastSyncTime = new Date().toISOString();
-    saveGSheetsConfig(gSheetsConfig);
+    const updateData = await updateRes.json();
+    if (updateData.error) {
+      console.warn('[Google Sheets] batchUpdate error:', updateData.error.message);
+    } else {
+      gSheetsConfig.lastSyncTime = new Date().toISOString();
+      saveGSheetsConfig(gSheetsConfig);
+      console.log('[Google Sheets] All 10 tabs successfully synchronized at', gSheetsConfig.lastSyncTime);
+    }
   } catch (err: any) {
-    console.warn('Background Google Sheets sync warning:', err.message);
+    console.warn('[Google Sheets] Background sync warning:', err.message);
   }
 }
 
 // Trigger initial sync on startup
 setTimeout(() => {
   syncAllToGoogleSheets().catch(() => {});
-}, 3000);
+}, 2000);
 
 // ==========================================
 // SYSTEM & HEALTH
 // ==========================================
 app.get('/api/health', (req: Request, res: Response) => {
+  const effCfg = getEffectiveSheetsConfig();
   res.json({
     status: 'ok',
     system: 'Real Deals Procurement & Logistics Management ERP',
@@ -397,7 +518,7 @@ app.get('/api/health', (req: Request, res: Response) => {
     outgoingCount: db.outgoingTransactions.length,
     shipmentsCount: db.shipments.length,
     usersCount: db.users.length,
-    googleSheetsConnected: Boolean(gSheetsConfig.spreadsheetId && gSheetsConfig.serviceAccountEmail && gSheetsConfig.privateKey)
+    googleSheetsConnected: Boolean(effCfg.spreadsheetId && effCfg.serviceAccountEmail && effCfg.privateKey)
   });
 });
 
@@ -934,6 +1055,174 @@ app.post('/api/inventory/bulk-closing-balances', (req: Request, res: Response) =
     success: true,
     message: `Updated closing balances for ${updatedCount} items at ${wh.name}`,
     warehouseId: wh.id
+  });
+});
+
+// BULK UPLOAD COMPLETE ITEMS & CLOSING BALANCES (Supports 2,000+ items from CSV / Excel / Sheet Migration)
+app.post('/api/inventory/bulk-upload-complete', (req: Request, res: Response) => {
+  const { itemsWithBalances, defaultWarehouseId, currentUser } = req.body;
+  if (!Array.isArray(itemsWithBalances) || itemsWithBalances.length === 0) {
+    return res.status(400).json({ error: 'Array of itemsWithBalances is required' });
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  let newItemsCreated = 0;
+  let existingItemsUpdated = 0;
+  let balancesSet = 0;
+
+  // Pre-index existing items by oemPartNumber (lowercase) and sku
+  const itemMap = new Map<string, Item>();
+  db.items.forEach(i => {
+    itemMap.set(i.oemPartNumber.toLowerCase().trim(), i);
+    if (i.sku) itemMap.set(i.sku.toLowerCase().trim(), i);
+  });
+
+  // Pre-index warehouses
+  const warehouseMap = new Map<string, Warehouse>();
+  db.warehouses.forEach(w => {
+    warehouseMap.set(w.id.toLowerCase(), w);
+    warehouseMap.set(w.code.toLowerCase(), w);
+    warehouseMap.set(w.name.toLowerCase(), w);
+  });
+
+  const defaultWh = db.warehouses.find(w => w.id === defaultWarehouseId) || db.warehouses[0];
+
+  for (let idx = 0; idx < itemsWithBalances.length; idx++) {
+    const entry = itemsWithBalances[idx];
+    const partNum = (entry.oemPartNumber || entry.itemCode || entry.partNumber || entry.sku || '').toString().trim();
+    if (!partNum) continue;
+
+    let targetItem = itemMap.get(partNum.toLowerCase());
+
+    if (!targetItem) {
+      // Create new Item in Master Catalog
+      const cost = Number(entry.costPriceUSD || entry.cost || entry.unitCost) || 0;
+      const brand = (entry.brand || 'Industrial Spare').toString().trim();
+      const desc = (entry.description || entry.desc || partNum).toString().trim();
+      const cat = (entry.category || 'Automation & Controls').toString().trim();
+      const unit = (entry.unit || 'PCS').toString().trim();
+      const cond = entry.condition || 'Factory Sealed New';
+      const minStock = Number(entry.minSafetyStock) || 2;
+      const rop = Number(entry.reorderPoint) || (minStock * 2);
+      const targetStock = Number(entry.targetStockLevel) || (minStock * 5);
+
+      targetItem = {
+        id: `ITEM-${(db.items.length + 1).toString().padStart(4, '0')}`,
+        sku: partNum,
+        oemPartNumber: partNum,
+        brand: brand || 'Industrial Spare',
+        description: desc || partNum,
+        category: cat || 'Spare Parts',
+        condition: cond,
+        unit: unit || 'PCS',
+        costPriceUSD: cost,
+        sellingPriceUSD: Number(entry.sellingPriceUSD) || (cost * 1.35),
+        weightKg: Number(entry.weightKg) || 1.0,
+        hsCode: entry.hsCode || '8537.10.91',
+        countryOfOrigin: entry.countryOfOrigin || 'USA',
+        minSafetyStock: minStock,
+        reorderPoint: rop,
+        targetStockLevel: targetStock,
+        defaultLeadTimeDays: Number(entry.defaultLeadTimeDays) || 14,
+        createdAt: today,
+        updatedAt: today
+      };
+
+      db.items.push(targetItem);
+      itemMap.set(partNum.toLowerCase(), targetItem);
+      newItemsCreated++;
+
+      // Initialize inventory records across all warehouses with 0
+      for (const wh of db.warehouses) {
+        db.inventory.push({
+          id: `INV-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 9000)}-${idx}`,
+          itemId: targetItem.id,
+          warehouseId: wh.id,
+          binLocation: 'Shelf A-01',
+          physicalStock: 0,
+          reservedStock: 0,
+          availableStock: 0,
+          inTransitStock: 0,
+          quarantinedStock: 0,
+          lastCountDate: today,
+          updatedAt: today
+        });
+      }
+    } else {
+      // Update item if additional metadata provided
+      let changed = false;
+      if (entry.description && (targetItem.description === targetItem.oemPartNumber || !targetItem.description)) {
+        targetItem.description = entry.description.toString().trim();
+        changed = true;
+      }
+      if (entry.brand && targetItem.brand === 'Industrial Spare') {
+        targetItem.brand = entry.brand.toString().trim();
+        changed = true;
+      }
+      if (entry.costPriceUSD !== undefined && targetItem.costPriceUSD === 0) {
+        targetItem.costPriceUSD = Number(entry.costPriceUSD);
+        changed = true;
+      }
+      if (changed) existingItemsUpdated++;
+    }
+
+    // Determine target warehouse for closing balance
+    const rawWh = (entry.warehouseCode || entry.warehouseId || entry.warehouse || entry.store || '').toString().trim().toLowerCase();
+    const targetWh = warehouseMap.get(rawWh) || defaultWh;
+
+    // Set closing balance
+    const rawBal = entry.closingBalance !== undefined ? entry.closingBalance : (entry.physicalStock !== undefined ? entry.physicalStock : entry.qty);
+    if (rawBal !== undefined && rawBal !== null && rawBal !== '') {
+      const closingQty = Math.max(0, Number(rawBal) || 0);
+      let inv = db.inventory.find(i => i.warehouseId === targetWh.id && i.itemId === targetItem!.id);
+
+      if (!inv) {
+        inv = {
+          id: `INV-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 9000)}-${idx}`,
+          itemId: targetItem.id,
+          warehouseId: targetWh.id,
+          binLocation: entry.binLocation || 'Shelf A-01',
+          physicalStock: closingQty,
+          reservedStock: 0,
+          availableStock: closingQty,
+          inTransitStock: 0,
+          quarantinedStock: 0,
+          lastCountDate: today,
+          updatedAt: today
+        };
+        db.inventory.push(inv);
+      } else {
+        inv.physicalStock = closingQty;
+        inv.availableStock = Math.max(0, closingQty - inv.reservedStock - inv.quarantinedStock);
+        if (entry.binLocation) inv.binLocation = entry.binLocation;
+        inv.lastCountDate = today;
+        inv.updatedAt = today;
+      }
+      balancesSet++;
+    }
+  }
+
+  saveDatabase();
+
+  logAudit(
+    'BULK_INVENTORY_UPLOAD',
+    'Inventory',
+    'ItemMaster',
+    'BULK',
+    'BULK-UPLOAD',
+    `Bulk uploaded ${itemsWithBalances.length} records. Created ${newItemsCreated} new catalog items, updated ${existingItemsUpdated} items, and set ${balancesSet} warehouse closing balances.`,
+    currentUser || { id: 'SYS', name: 'Admin', role: 'Admin' }
+  );
+
+  syncAllToGoogleSheets().catch(() => {});
+
+  res.json({
+    success: true,
+    totalReceived: itemsWithBalances.length,
+    newItemsCreated,
+    existingItemsUpdated,
+    balancesSet,
+    message: `Successfully processed ${itemsWithBalances.length} records. Added ${newItemsCreated} new items to master catalog and updated ${balancesSet} store closing balances.`
   });
 });
 
@@ -1564,6 +1853,59 @@ app.post('/api/suppliers', (req: Request, res: Response) => {
   res.json(newSup);
 });
 
+app.post('/api/suppliers/bulk', (req: Request, res: Response) => {
+  const { suppliers, currentUser } = req.body;
+  if (!Array.isArray(suppliers) || suppliers.length === 0) {
+    return res.status(400).json({ error: 'Array of suppliers is required' });
+  }
+
+  let createdCount = 0;
+  suppliers.forEach((s: any) => {
+    const name = (s.name || s.supplierName || s.companyName || '').toString().trim();
+    if (!name) return;
+
+    // Check if supplier already exists by name
+    const existing = db.suppliers.find(sup => sup.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (s.contactPerson) existing.contactPerson = s.contactPerson;
+      if (s.email) existing.email = s.email;
+      if (s.phone) existing.phone = s.phone;
+      if (s.country) existing.country = s.country;
+      if (s.paymentTerms) existing.paymentTerms = s.paymentTerms;
+      return;
+    }
+
+    const newSup: Supplier = {
+      id: `SUP-${(db.suppliers.length + 1).toString().padStart(3, '0')}`,
+      code: (s.code || name.substring(0, 4)).toUpperCase(),
+      name,
+      contactPerson: s.contactPerson || 'Procurement Agent',
+      email: s.email || 'orders@supplier.com',
+      phone: s.phone || '',
+      country: s.country || 'USA',
+      city: s.city || 'Direct',
+      address: s.address || '',
+      paymentTerms: s.paymentTerms || 'Net 30 Days',
+      currency: s.currency || 'USD',
+      specialtyBrands: s.specialtyBrands || ['Industrial Equipment'],
+      active: true
+    };
+    db.suppliers.push(newSup);
+    createdCount++;
+  });
+
+  saveDatabase();
+  logAudit('BULK_ADD_SUPPLIERS', 'Suppliers', 'Supplier', 'BULK', 'MULTIPLE', `Bulk imported ${createdCount} suppliers into directory`, currentUser);
+  syncAllToGoogleSheets().catch(() => {});
+
+  res.json({
+    success: true,
+    createdCount,
+    totalSuppliers: db.suppliers.length,
+    message: `Successfully processed supplier list (${createdCount} new suppliers added).`
+  });
+});
+
 app.put('/api/suppliers/:id', (req: Request, res: Response) => {
   const idx = db.suppliers.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Supplier not found' });
@@ -1582,7 +1924,7 @@ app.get('/api/customers', (req: Request, res: Response) => {
 });
 
 app.post('/api/customers', (req: Request, res: Response) => {
-  const { companyName, contactPerson, email, phone, shippingAddress, country, currentUser } = req.body;
+  const { companyName, contactPerson, email, phone, shippingAddress, country, city, paymentTerms, currency, currentUser } = req.body;
   if (!companyName) return res.status(400).json({ error: 'Customer Name is required' });
 
   const newCust: Customer = {
@@ -1593,10 +1935,10 @@ app.post('/api/customers', (req: Request, res: Response) => {
     email: email || 'purchasing@client.com',
     phone: phone || '',
     country: country || 'USA',
-    city: 'Direct',
+    city: city || 'Direct',
     shippingAddress: shippingAddress || 'Client Receiving Dock',
-    paymentTerms: 'Net 30 Days',
-    currency: 'USD',
+    paymentTerms: paymentTerms || 'Net 30 Days',
+    currency: currency || 'USD',
     active: true
   };
 
@@ -1607,6 +1949,59 @@ app.post('/api/customers', (req: Request, res: Response) => {
   syncAllToGoogleSheets().catch(() => {});
 
   res.json(newCust);
+});
+
+app.post('/api/customers/bulk', (req: Request, res: Response) => {
+  const { customers, currentUser } = req.body;
+  if (!Array.isArray(customers) || customers.length === 0) {
+    return res.status(400).json({ error: 'Array of customers is required' });
+  }
+
+  let createdCount = 0;
+  customers.forEach((c: any) => {
+    const name = (c.companyName || c.name || c.customerName || '').toString().trim();
+    if (!name) return;
+
+    // Check if customer already exists by companyName
+    const existing = db.customers.find(cust => cust.companyName.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (c.contactPerson) existing.contactPerson = c.contactPerson;
+      if (c.email) existing.email = c.email;
+      if (c.phone) existing.phone = c.phone;
+      if (c.country) existing.country = c.country;
+      if (c.shippingAddress) existing.shippingAddress = c.shippingAddress;
+      if (c.paymentTerms) existing.paymentTerms = c.paymentTerms;
+      return;
+    }
+
+    const newCust: Customer = {
+      id: `CUST-${(db.customers.length + 1).toString().padStart(3, '0')}`,
+      code: (c.code || name.substring(0, 4)).toUpperCase(),
+      companyName: name,
+      contactPerson: c.contactPerson || 'Procurement Contact',
+      email: c.email || 'purchasing@client.com',
+      phone: c.phone || '',
+      country: c.country || 'USA',
+      city: c.city || 'Direct',
+      shippingAddress: c.shippingAddress || c.address || 'Client Receiving Dock',
+      paymentTerms: c.paymentTerms || 'Net 30 Days',
+      currency: c.currency || 'USD',
+      active: true
+    };
+    db.customers.push(newCust);
+    createdCount++;
+  });
+
+  saveDatabase();
+  logAudit('BULK_ADD_CUSTOMERS', 'Customers', 'Customer', 'BULK', 'MULTIPLE', `Bulk imported ${createdCount} customers into directory`, currentUser);
+  syncAllToGoogleSheets().catch(() => {});
+
+  res.json({
+    success: true,
+    createdCount,
+    totalCustomers: db.customers.length,
+    message: `Successfully processed customer list (${createdCount} new customers added).`
+  });
 });
 
 app.put('/api/customers/:id', (req: Request, res: Response) => {
@@ -1631,12 +2026,13 @@ app.get('/api/audit', (req: Request, res: Response) => {
 // GOOGLE SHEETS SETUP & SYNC
 // ==========================================
 app.get('/api/database/config', (req: Request, res: Response) => {
+  const effCfg = getEffectiveSheetsConfig();
   res.json({
-    spreadsheetId: gSheetsConfig.spreadsheetId,
-    serviceAccountEmail: gSheetsConfig.serviceAccountEmail,
-    autoSync: gSheetsConfig.autoSync,
-    lastSyncTime: gSheetsConfig.lastSyncTime,
-    hasPrivateKey: Boolean(gSheetsConfig.privateKey)
+    spreadsheetId: effCfg.spreadsheetId,
+    serviceAccountEmail: effCfg.serviceAccountEmail,
+    autoSync: effCfg.autoSync,
+    lastSyncTime: effCfg.lastSyncTime || gSheetsConfig.lastSyncTime,
+    hasPrivateKey: Boolean(effCfg.privateKey)
   });
 });
 

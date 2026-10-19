@@ -35,6 +35,7 @@ interface SimpleStoreInventoryProps {
   onUpdateBinLocation: (invId: string, newBin: string) => Promise<void>;
   onRefreshData?: () => Promise<void>;
   currentUser: UserType;
+  onOpenBulkUpload?: (storeId?: string) => void;
 }
 
 export const SimpleStoreInventory: React.FC<SimpleStoreInventoryProps> = ({
@@ -47,7 +48,8 @@ export const SimpleStoreInventory: React.FC<SimpleStoreInventoryProps> = ({
   onOpenDispatchForStore,
   onUpdateBinLocation,
   onRefreshData,
-  currentUser
+  currentUser,
+  onOpenBulkUpload
 }) => {
   const isAdmin = currentUser.role === 'Admin';
   const isOperator = currentUser.role !== 'Admin';
@@ -352,6 +354,17 @@ export const SimpleStoreInventory: React.FC<SimpleStoreInventoryProps> = ({
               <Scale className="w-3.5 h-3.5 text-blue-600" />
               <span>Put Closing Balances</span>
             </button>
+
+            {onOpenBulkUpload && (
+              <button
+                onClick={() => onOpenBulkUpload(currentWh.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold transition-colors cursor-pointer"
+                title="Bulk upload items & closing balances from CSV or Google Sheets"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-emerald-700" />
+                <span>+ Bulk Import CSV</span>
+              </button>
+            )}
 
             {isAdmin && (
               <>

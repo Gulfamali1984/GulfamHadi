@@ -12,7 +12,9 @@ import {
   Users,
   Database,
   Shield,
-  UserCheck
+  UserCheck,
+  UploadCloud,
+  Plus
 } from 'lucide-react';
 import { Warehouse, User } from '../types/erp';
 
@@ -23,8 +25,9 @@ export type SimpleTab =
   | 'consolidated'
   | 'store_by_store'
   | 'shipments'
-  | 'users'
-  | 'sheets_sync';
+  | 'items'
+  | 'contacts'
+  | 'users';
 
 interface SimpleHeaderProps {
   activeTab: SimpleTab;
@@ -34,11 +37,14 @@ interface SimpleHeaderProps {
   onSelectStore: (storeId: string) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  googleSheetsConnected: boolean;
-  onSync: () => void;
-  isSyncing: boolean;
+  googleSheetsConnected?: boolean;
+  onSync?: () => void;
+  isSyncing?: boolean;
   onQuickReceive: () => void;
   onQuickDispatch: () => void;
+  onOpenBulkUpload?: () => void;
+  onOpenCreateItem?: () => void;
+  onOpenCreateCustomer?: () => void;
   currentUser: User;
   onOpenLoginModal: () => void;
 }
@@ -56,6 +62,9 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
   isSyncing,
   onQuickReceive,
   onQuickDispatch,
+  onOpenBulkUpload,
+  onOpenCreateItem,
+  onOpenCreateCustomer,
   currentUser,
   onOpenLoginModal
 }) => {
@@ -148,16 +157,17 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             <span>− Dispatch Stock</span>
           </button>
 
-          {/* Google Sheets Sync Button */}
-          <button
-            onClick={onSync}
-            disabled={isSyncing}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors"
-            title="Sync database to Google Sheets"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
-            <span className="hidden xl:inline">{isSyncing ? 'Syncing...' : 'Sync'}</span>
-          </button>
+          {/* Quick Bulk Upload (2,000+ Items & Balances) */}
+          {onOpenBulkUpload && (
+            <button
+              onClick={onOpenBulkUpload}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              title="Bulk upload 2,000+ items with closing balances from CSV or Excel"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-emerald-700" />
+              <span className="hidden lg:inline">+ Bulk Upload</span>
+            </button>
+          )}
 
           {/* User Account / Role Switcher */}
           <button
@@ -257,6 +267,32 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             <span>Shipment Tracker</span>
           </button>
 
+          {/* Items Master Catalog */}
+          <button
+            onClick={() => onSelectTab('items')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ${
+              activeTab === 'items'
+                ? 'bg-slate-100 text-slate-900 font-bold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Package className="w-3.5 h-3.5 text-slate-600" />
+            <span>Items Master</span>
+          </button>
+
+          {/* Customers & Suppliers */}
+          <button
+            onClick={() => onSelectTab('contacts')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ${
+              activeTab === 'contacts'
+                ? 'bg-slate-100 text-slate-900 font-bold'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-slate-600" />
+            <span>Customers &amp; Suppliers</span>
+          </button>
+
           {isAdmin && (
             <button
               onClick={() => onSelectTab('users')}
@@ -268,23 +304,6 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
             >
               <Users className="w-3.5 h-3.5 text-slate-600" />
               <span>Users &amp; Roles</span>
-            </button>
-          )}
-
-          {isAdmin && (
-            <button
-              onClick={() => onSelectTab('sheets_sync')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors shrink-0 ml-auto ${
-                activeTab === 'sheets_sync'
-                  ? 'bg-slate-100 text-slate-900 font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5 text-slate-500" />
-              <span>Google Sheets</span>
-              {googleSheetsConnected && (
-                <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block ml-0.5" title="Connected" />
-              )}
             </button>
           )}
         </nav>

@@ -206,6 +206,31 @@ export const api = {
     return res.json();
   },
 
+  // Bulk Upload Complete Items and Closing Balances (For 2,000+ items from CSV/Excel/Sheets)
+  bulkUploadCompleteInventory: async (data: {
+    itemsWithBalances: any[];
+    defaultWarehouseId?: string;
+    currentUser?: User;
+  }): Promise<{
+    success: boolean;
+    totalReceived: number;
+    newItemsCreated: number;
+    existingItemsUpdated: number;
+    balancesSet: number;
+    message: string;
+  }> => {
+    const res = await fetch(`${BASE_URL}/inventory/bulk-upload-complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to upload inventory items and balances');
+    }
+    return res.json();
+  },
+
   // Inter-warehouse transfer
   transferStock: async (data: {
     sourceWarehouseId: string;
@@ -376,6 +401,15 @@ export const api = {
     return res.json();
   },
 
+  bulkCreateSuppliers: async (suppliers: Partial<Supplier>[], currentUser?: User): Promise<{ success: boolean; createdCount: number; message: string }> => {
+    const res = await fetch(`${BASE_URL}/suppliers/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ suppliers, currentUser })
+    });
+    return res.json();
+  },
+
   updateSupplier: async (id: string, data: Partial<Supplier>, currentUser?: User): Promise<Supplier> => {
     const res = await fetch(`${BASE_URL}/suppliers/${id}`, {
       method: 'PUT',
@@ -395,6 +429,15 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, currentUser })
+    });
+    return res.json();
+  },
+
+  bulkCreateCustomers: async (customers: Partial<Customer>[], currentUser?: User): Promise<{ success: boolean; createdCount: number; message: string }> => {
+    const res = await fetch(`${BASE_URL}/customers/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customers, currentUser })
     });
     return res.json();
   },

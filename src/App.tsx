@@ -7,8 +7,12 @@ import { SimpleConsolidated } from './components/SimpleConsolidated';
 import { SimpleStoreInventory } from './components/SimpleStoreInventory';
 import { SimpleShipmentTracker } from './components/SimpleShipmentTracker';
 import { SimpleUserManagement } from './components/SimpleUserManagement';
-import { SimpleSheetsSettings } from './components/SimpleSheetsSettings';
 import { SimpleLoginModal } from './components/SimpleLoginModal';
+import { SimpleItemMaster } from './components/SimpleItemMaster';
+import { SimpleContacts } from './components/SimpleContacts';
+import { BulkUploadModal } from './components/BulkUploadModal';
+import { CreateItemModal } from './components/CreateItemModal';
+import { CreateContactModal } from './components/CreateContactModal';
 import { api } from './services/api';
 import {
   Item,
@@ -63,6 +67,19 @@ export default function App() {
   // Quick modals for header buttons
   const [showQuickReceive, setShowQuickReceive] = useState(false);
   const [showQuickDispatch, setShowQuickDispatch] = useState(false);
+
+  // Bulk Upload Modal
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkUploadStoreId, setBulkUploadStoreId] = useState<string | undefined>(undefined);
+
+  // Create / Edit Item Modal
+  const [showCreateItemModal, setShowCreateItemModal] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<Item | null>(null);
+
+  // Create / Edit Customer & Supplier Modal
+  const [showCreateContactModal, setShowCreateContactModal] = useState(false);
+  const [contactModalMode, setContactModalMode] = useState<'customer' | 'supplier'>('customer');
+  const [contactToEdit, setContactToEdit] = useState<Customer | Supplier | null>(null);
 
   // Quick Receive Form State
   const [quickRecvStoreId, setQuickRecvStoreId] = useState('');
@@ -184,7 +201,7 @@ export default function App() {
     refreshAllData();
   }, []);
 
-  // Sync to Google Sheets
+  // Sync to Google Sheets (runs seamlessly in background)
   const handleSync = async () => {
     setIsSyncing(true);
     try {
@@ -192,11 +209,9 @@ export default function App() {
       if (res.success) {
         setGoogleSheetsConnected(true);
         await refreshAllData();
-      } else {
-        setActiveTab('sheets_sync');
       }
     } catch (e) {
-      setActiveTab('sheets_sync');
+      console.warn('Sync notice:', e);
     } finally {
       setIsSyncing(false);
     }
@@ -326,6 +341,19 @@ export default function App() {
         isSyncing={isSyncing}
         onQuickReceive={handleOpenQuickReceive}
         onQuickDispatch={handleOpenQuickDispatch}
+        onOpenBulkUpload={() => {
+          setBulkUploadStoreId(selectedStoreId !== 'ALL' ? selectedStoreId : undefined);
+          setShowBulkUpload(true);
+        }}
+        onOpenCreateItem={() => {
+          setItemToEdit(null);
+          setShowCreateItemModal(true);
+        }}
+        onOpenCreateCustomer={() => {
+          setContactModalMode('customer');
+          setContactToEdit(null);
+          setShowCreateContactModal(true);
+        }}
         currentUser={currentUser}
         onOpenLoginModal={() => setShowLoginModal(true)}
       />
@@ -364,6 +392,15 @@ export default function App() {
             }}
             onRefreshData={refreshAllData}
             prefillStoreId={selectedStoreId !== 'ALL' ? selectedStoreId : undefined}
+            onOpenCreateItem={() => {
+              setItemToEdit(null);
+              setShowCreateItemModal(true);
+            }}
+            onOpenCreateSupplier={() => {
+              setContactModalMode('supplier');
+              setContactToEdit(null);
+              setShowCreateContactModal(true);
+            }}
           />
         )}
 
@@ -382,6 +419,15 @@ export default function App() {
             }}
             onRefreshData={refreshAllData}
             prefillStoreId={selectedStoreId !== 'ALL' ? selectedStoreId : undefined}
+            onOpenCreateCustomer={() => {
+              setContactModalMode('customer');
+              setContactToEdit(null);
+              setShowCreateContactModal(true);
+            }}
+            onOpenCreateItem={() => {
+              setItemToEdit(null);
+              setShowCreateItemModal(true);
+            }}
           />
         )}
 
@@ -391,6 +437,14 @@ export default function App() {
             <SimpleConsolidated
               consolidatedInventory={consolidatedInventory}
               warehouses={warehouses}
+              onOpenBulkUpload={() => {
+                setBulkUploadStoreId(undefined);
+                setShowBulkUpload(true);
+              }}
+              onOpenCreateItem={() => {
+                setItemToEdit(null);
+                setShowCreateItemModal(true);
+              }}
             />
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center max-w-lg mx-auto my-12 shadow-xs">
@@ -433,6 +487,10 @@ export default function App() {
             }}
             onRefreshData={refreshAllData}
             currentUser={currentUser}
+            onOpenBulkUpload={(storeId) => {
+              setBulkUploadStoreId(storeId);
+              setShowBulkUpload(true);
+            }}
           />
         )}
 
@@ -449,7 +507,42 @@ export default function App() {
           />
         )}
 
-        {/* Tab 7: Users & Roles (Admin Only) */}
+        {/* Tab 7: Items Master Catalog & Registration */}
+        {activeTab === 'items' && (
+          <SimpleItemMaster
+            items={items}
+            warehouses={warehouses}
+            inventory={inventory}
+            consolidatedInventory={consolidatedInventory}
+            currentUser={currentUser}
+            suppliers={suppliers}
+            onOpenCreateItem={() => {
+              setItemToEdit(null);
+              setShowCreateItemModal(true);
+            }}
+            onOpenBulkUpload={() => {
+              setBulkUploadStoreId(undefined);
+              setShowBulkUpload(true);
+            }}
+            onEditItem={(item) => {
+              setItemToEdit(item);
+              setShowCreateItemModal(true);
+            }}
+            onRefreshData={refreshAllData}
+          />
+        )}
+
+        {/* Tab 8: Customers & Suppliers Directory */}
+        {activeTab === 'contacts' && (
+          <SimpleContacts
+            customers={customers}
+            suppliers={suppliers}
+            currentUser={currentUser}
+            onRefreshData={refreshAllData}
+          />
+        )}
+
+        {/* Tab 9: Users & Roles (Admin Only) */}
         {activeTab === 'users' && currentUser.role === 'Admin' && (
           <SimpleUserManagement
             users={users}
@@ -468,13 +561,6 @@ export default function App() {
               await api.toggleUserStatus(id, active, currentUser);
               await refreshAllData();
             }}
-          />
-        )}
-
-        {/* Tab 8: Google Sheets Setup */}
-        {activeTab === 'sheets_sync' && (
-          <SimpleSheetsSettings
-            onRefreshAllData={refreshAllData}
           />
         )}
       </main>
@@ -838,6 +924,43 @@ export default function App() {
           }}
           onLoginWithCredentials={handleLoginWithCredentials}
           onClose={() => setShowLoginModal(false)}
+        />
+      )}
+
+      {/* Bulk Upload Modal (2,000+ Items with Closing Balances) */}
+      {showBulkUpload && (
+        <BulkUploadModal
+          warehouses={warehouses}
+          currentUser={currentUser}
+          preselectedWarehouseId={bulkUploadStoreId}
+          onClose={() => setShowBulkUpload(false)}
+          onUploadSuccess={refreshAllData}
+        />
+      )}
+
+      {/* Create / Edit Item Modal */}
+      {showCreateItemModal && (
+        <CreateItemModal
+          warehouses={warehouses}
+          currentUser={currentUser}
+          itemToEdit={itemToEdit}
+          onClose={() => setShowCreateItemModal(false)}
+          onSuccess={async () => {
+            await refreshAllData();
+          }}
+        />
+      )}
+
+      {/* Create / Edit Customer or Supplier Modal */}
+      {showCreateContactModal && (
+        <CreateContactModal
+          mode={contactModalMode}
+          contactToEdit={contactToEdit}
+          currentUser={currentUser}
+          onClose={() => setShowCreateContactModal(false)}
+          onSuccess={async () => {
+            await refreshAllData();
+          }}
         />
       )}
     </div>
