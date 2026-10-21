@@ -44,8 +44,17 @@ export default function App() {
   const [selectedStoreId, setSelectedStoreId] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Authentication & Current User
-  const [currentUser, setCurrentUser] = useState<User>(INITIAL_USERS[0]);
+  // Authentication & Current User - session requires password on opening
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('rd_erp_session_user');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.email) return parsed;
+      }
+    } catch {}
+    return null;
+  });
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -222,17 +231,28 @@ export default function App() {
     const res = await api.login(email, password);
     if (res.success && res.user) {
       setCurrentUser(res.user);
+      sessionStorage.setItem('rd_erp_session_user', JSON.stringify(res.user));
+      localStorage.removeItem('rd_erp_session_user');
       if (res.user.role !== 'Admin' && res.user.assignedWarehouseId) {
         setSelectedStoreId(res.user.assignedWarehouseId);
+        setActiveTab('store_by_store');
       }
       return true;
     }
     return false;
   };
 
+  // Logout handler
+  const handleLogout = () => {
+    sessionStorage.removeItem('rd_erp_session_user');
+    localStorage.removeItem('rd_erp_session_user');
+    setCurrentUser(null);
+    setShowLoginModal(false);
+  };
+
   // Open Quick Receive
   const handleOpenQuickReceive = () => {
-    const defaultWh = (!currentUser.role.includes('Admin') && currentUser.assignedWarehouseId)
+    const defaultWh = (currentUser && !currentUser.role.includes('Admin') && currentUser.assignedWarehouseId)
       ? currentUser.assignedWarehouseId
       : (selectedStoreId !== 'ALL' ? selectedStoreId : warehouses[0]?.id || 'WH-001');
     const firstItm = items[0];
@@ -250,7 +270,7 @@ export default function App() {
 
   // Open Quick Dispatch
   const handleOpenQuickDispatch = () => {
-    const defaultWh = (!currentUser.role.includes('Admin') && currentUser.assignedWarehouseId)
+    const defaultWh = (currentUser && !currentUser.role.includes('Admin') && currentUser.assignedWarehouseId)
       ? currentUser.assignedWarehouseId
       : (selectedStoreId !== 'ALL' ? selectedStoreId : warehouses[0]?.id || 'WH-001');
     const firstItm = items[0];
@@ -280,7 +300,7 @@ export default function App() {
       quantityReceived: Number(quickRecvQty),
       itemDescription: quickRecvDesc,
       unitCost: Number(quickRecvUnitCost)
-    }, currentUser);
+    }, currentUser || undefined);
 
     setShowQuickReceive(false);
     await refreshAllData();
@@ -302,7 +322,7 @@ export default function App() {
         poNumber: quickDispPO,
         itemDescription: quickDispDesc,
         isAdminOverride: quickDispAdminOverride
-      }, currentUser);
+      }, currentUser || undefined);
 
       setShowQuickDispatch(false);
       await refreshAllData();
@@ -316,6 +336,28 @@ export default function App() {
   const quickDispInv = inventory.find(i => i.itemId === quickDispMatchedItem?.id && i.warehouseId === quickDispStoreId);
   const quickDispAvail = quickDispInv ? quickDispInv.availableStock : 0;
   const quickDispNegativeRisk = quickDispQty > quickDispAvail;
+
+  // MANDATORY SECURITY GATE: Nobody can access this app without login first
+  if (!currentUser) {
+    return (
+      <SimpleLoginModal
+        isMandatory={true}
+        currentUser={null}
+        users={users}
+        warehouses={warehouses}
+        onSelectUser={(u) => {
+          setCurrentUser(u);
+          sessionStorage.setItem('rd_erp_session_user', JSON.stringify(u));
+          if (u.role !== 'Admin' && u.assignedWarehouseId) {
+            setSelectedStoreId(u.assignedWarehouseId);
+            setActiveTab('store_by_store');
+          }
+        }}
+        onLoginWithCredentials={handleLoginWithCredentials}
+        onClose={() => {}}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Plus_Jakarta_Sans',sans-serif]">
@@ -356,6 +398,7 @@ export default function App() {
         }}
         currentUser={currentUser}
         onOpenLoginModal={() => setShowLoginModal(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -913,13 +956,16 @@ export default function App() {
       {/* Login & User Switcher Modal */}
       {showLoginModal && (
         <SimpleLoginModal
+          isMandatory={false}
           currentUser={currentUser}
           users={users}
           warehouses={warehouses}
           onSelectUser={(u) => {
             setCurrentUser(u);
+            localStorage.setItem('rd_erp_session_user', JSON.stringify(u));
             if (u.role !== 'Admin' && u.assignedWarehouseId) {
               setSelectedStoreId(u.assignedWarehouseId);
+              setActiveTab('store_by_store');
             }
           }}
           onLoginWithCredentials={handleLoginWithCredentials}

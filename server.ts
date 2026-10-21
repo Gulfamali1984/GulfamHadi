@@ -38,13 +38,30 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = IS_SERVERLESS
+  ? path.resolve('/tmp', 'data')
+  : path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (err) {
+    console.warn('Could not create DATA_DIR:', err);
+  }
 }
 
 const DB_FILE = path.join(DATA_DIR, 'erp_database.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'google_sheets_config.json');
+
+// If running in serverless and /tmp DB_FILE does not exist yet, copy from repo data
+if (IS_SERVERLESS && !fs.existsSync(DB_FILE)) {
+  const repoDbFile = path.resolve(process.cwd(), 'data', 'erp_database.json');
+  if (fs.existsSync(repoDbFile)) {
+    try {
+      fs.copyFileSync(repoDbFile, DB_FILE);
+    } catch {}
+  }
+}
 
 interface DatabaseState {
   items: Item[];
@@ -104,6 +121,11 @@ try {
         });
         saveDatabase();
       }
+      const adminU = db.users.find(u => u.email.toLowerCase() === 'dawoodzafar1984@gmail.com');
+      if (adminU && adminU.password !== 'gulfam12345') {
+        adminU.password = 'gulfam12345';
+        saveDatabase();
+      }
     }
   } else {
     db = loadInitialState();
@@ -135,11 +157,11 @@ interface GoogleSheetsSettings {
 function normalizePrivateKey(key: string): string {
   if (!key) return '';
   let cleaned = key.trim();
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+  while ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
     try {
       cleaned = JSON.parse(cleaned);
     } catch {
-      cleaned = cleaned.slice(1, -1);
+      cleaned = cleaned.slice(1, -1).trim();
     }
   }
   return cleaned.replace(/\\n/g, '\n').replace(/\\n/g, '\n');
@@ -260,7 +282,7 @@ async function getGoogleSheetsClient(email: string, privateKey: string) {
   return client;
 }
 
-// Ensure all required tabs exist in Google Sheets; create missing ones automatically
+// Ensure all required tabs exist in Google Sheets; create missing ones automatically and format them
 async function ensureAllGoogleSheetsTabs(token: string, spreadsheetId: string) {
   try {
     const metaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`, {
@@ -276,21 +298,35 @@ async function ensureAllGoogleSheetsTabs(token: string, spreadsheetId: string) {
     const existingSet = new Set(existingSheetTitles);
     const missingTabs = REQUIRED_SHEETS_TABS.filter(t => !existingSet.has(t));
 
+    const requests: any[] = [];
+
     if (missingTabs.length > 0) {
       console.log(`[Google Sheets] Automatically creating ${missingTabs.length} missing tabs in spreadsheet:`, missingTabs);
-      const requests = missingTabs.map(title => ({
-        addSheet: {
-          properties: {
-            title,
-            gridProperties: {
-              rowCount: 2000,
-              columnCount: 26,
-              frozenRowCount: 1
+      missingTabs.forEach(title => {
+        requests.push({
+          addSheet: {
+            properties: {
+              title,
+              gridProperties: {
+                rowCount: 2000,
+                columnCount: 26,
+                frozenRowCount: 1
+              }
             }
           }
-        }
-      }));
+        });
+      });
+    }
 
+    // Clean up empty default "Sheet1" if user has actual ERP tabs
+    const defaultSheet = meta.sheets.find((s: any) => s.properties.title === 'Sheet1');
+    if (defaultSheet && meta.sheets.length > 1) {
+      requests.push({
+        deleteSheet: { sheetId: defaultSheet.properties.sheetId }
+      });
+    }
+
+    if (requests.length > 0) {
       const addRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
         method: 'POST',
         headers: {
@@ -301,10 +337,70 @@ async function ensureAllGoogleSheetsTabs(token: string, spreadsheetId: string) {
       });
       const addData = await addRes.json();
       if (addData.error) {
-        console.warn('[Google Sheets] Warning when creating missing tabs:', addData.error.message);
+        console.warn('[Google Sheets] Warning when updating tabs:', addData.error.message);
       } else {
-        console.log(`[Google Sheets] Successfully created ${missingTabs.length} tabs in spreadsheet!`);
+        console.log(`[Google Sheets] Tab structure verified & updated successfully!`);
       }
+    }
+
+    // Apply executive enterprise styling (Dark header bar #0F172A, white bold text, freeze row 1)
+    try {
+      const refreshedMetaRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const refreshedMeta = await refreshedMetaRes.json();
+      if (refreshedMeta && refreshedMeta.sheets) {
+        const styleRequests: any[] = [];
+        for (const s of refreshedMeta.sheets) {
+          const sheetId = s.properties.sheetId;
+          styleRequests.push({
+            repeatCell: {
+              range: {
+                sheetId,
+                startRowIndex: 0,
+                endRowIndex: 1,
+                startColumnIndex: 0,
+                endColumnIndex: 26
+              },
+              cell: {
+                userEnteredFormat: {
+                  backgroundColor: { red: 15 / 255, green: 23 / 255, blue: 42 / 255 },
+                  textFormat: {
+                    foregroundColor: { red: 1, green: 1, blue: 1 },
+                    bold: true,
+                    fontSize: 10
+                  },
+                  horizontalAlignment: 'LEFT'
+                }
+              },
+              fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)'
+            }
+          });
+          styleRequests.push({
+            updateSheetProperties: {
+              properties: {
+                sheetId,
+                gridProperties: {
+                  frozenRowCount: 1
+                }
+              },
+              fields: 'gridProperties.frozenRowCount'
+            }
+          });
+        }
+        if (styleRequests.length > 0) {
+          await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ requests: styleRequests })
+          });
+        }
+      }
+    } catch (styleErr: any) {
+      console.warn('[Google Sheets] Styling notice:', styleErr.message);
     }
   } catch (err: any) {
     console.warn('[Google Sheets] Exception during ensureAllGoogleSheetsTabs:', err.message);
@@ -528,20 +624,22 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.post('/api/auth/login', (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email) {
-    return res.status(400).json({ success: false, message: 'Email is required' });
+    return res.status(400).json({ success: false, message: 'Email address is required' });
   }
 
   const user = db.users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
   if (!user) {
-    return res.status(401).json({ success: false, message: 'Invalid email address.' });
+    return res.status(401).json({ success: false, message: 'Invalid email address. Access denied.' });
   }
 
   if (!user.active) {
     return res.status(403).json({ success: false, message: 'This user account has been deactivated. Please contact an Administrator.' });
   }
 
-  if (user.password && password && user.password !== password) {
-    return res.status(401).json({ success: false, message: 'Incorrect password.' });
+  if (user.password) {
+    if (!password || user.password !== password) {
+      return res.status(401).json({ success: false, message: 'Incorrect password. Please enter the valid password.' });
+    }
   }
 
   user.lastLogin = new Date().toISOString().replace('T', ' ').slice(0, 16);
@@ -557,6 +655,9 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
       email: user.email,
       role: user.role,
       assignedWarehouseId: user.assignedWarehouseId,
+      assignedWarehouseIds: user.assignedWarehouseIds,
+      assignedResponsibilities: user.assignedResponsibilities,
+      permissions: user.permissions,
       department: user.department,
       active: user.active
     }
@@ -575,7 +676,8 @@ app.get('/api/users', (req: Request, res: Response) => {
     department: u.department,
     assignedWarehouseId: u.assignedWarehouseId,
     active: u.active,
-    lastLogin: u.lastLogin
+    lastLogin: u.lastLogin,
+    password: u.password
   }));
   res.json(safeUsers);
 });
@@ -2050,25 +2152,29 @@ app.post('/api/database/sync-to-sheets', async (req: Request, res: Response) => 
 });
 
 // Vite middleware mounted in dev mode
-if (process.env.NODE_ENV !== 'production') {
-  import('vite').then(({ createServer }) => {
-    createServer({
-      server: { middlewareMode: true },
-      appType: 'spa'
-    }).then(vite => {
-      app.use(vite.middlewares);
-      app.listen(PORT, () => {
-        console.log(`Real Deals ERP running on http://localhost:${PORT}`);
+if (!process.env.VERCEL) {
+  if (process.env.NODE_ENV !== 'production') {
+    import('vite').then(({ createServer }) => {
+      createServer({
+        server: { middlewareMode: true },
+        appType: 'spa'
+      }).then(vite => {
+        app.use(vite.middlewares);
+        app.listen(PORT, () => {
+          console.log(`Real Deals ERP running on http://localhost:${PORT}`);
+        });
       });
     });
-  });
-} else {
-  const distPath = path.resolve(process.cwd(), 'dist');
-  app.use(express.static(distPath));
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-  app.listen(PORT, () => {
-    console.log(`Real Deals ERP running on http://localhost:${PORT}`);
-  });
+  } else {
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+    app.listen(PORT, () => {
+      console.log(`Real Deals ERP running on http://localhost:${PORT}`);
+    });
+  }
 }
+
+export default app;

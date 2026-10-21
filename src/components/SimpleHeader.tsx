@@ -14,7 +14,8 @@ import {
   Shield,
   UserCheck,
   UploadCloud,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 import { Warehouse, User } from '../types/erp';
 
@@ -47,6 +48,7 @@ interface SimpleHeaderProps {
   onOpenCreateCustomer?: () => void;
   currentUser: User;
   onOpenLoginModal: () => void;
+  onLogout?: () => void;
 }
 
 export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
@@ -66,7 +68,8 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
   onOpenCreateItem,
   onOpenCreateCustomer,
   currentUser,
-  onOpenLoginModal
+  onOpenLoginModal,
+  onLogout
 }) => {
   const isAdmin = currentUser.role === 'Admin';
   const assignedWh = warehouses.find(w => w.id === currentUser.assignedWarehouseId);
@@ -172,10 +175,10 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
           {/* User Account / Role Switcher */}
           <button
             onClick={onOpenLoginModal}
-            className="flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-left"
-            title="Switch User Account or Login"
+            className="flex items-center gap-1.5 pl-2 pr-2.5 py-1 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+            title="View User Details or Switch Account"
           >
-            <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 text-[10px] font-bold">
+            <div className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold">
               {currentUser.name.charAt(0)}
             </div>
             <div className="hidden sm:block">
@@ -187,6 +190,18 @@ export const SimpleHeader: React.FC<SimpleHeaderProps> = ({
               </span>
             </div>
           </button>
+
+          {/* Dedicated Logout Button */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+              title="Sign out of Real Deals ERP"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-600" />
+              <span className="hidden md:inline">Log Out</span>
+            </button>
+          )}
         </div>
       </div>
 

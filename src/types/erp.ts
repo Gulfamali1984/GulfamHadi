@@ -2,8 +2,11 @@ export type ItemCondition = 'Factory Sealed New' | 'New Open Box' | 'Used Tested
 
 export type UserRole =
   | 'Admin'
-  | 'Store Operator'
+  | 'Sales & Project Team (Read Only)'
+  | 'Stock IN / Receiving Operator'
+  | 'Stock OUT / Dispatch Operator'
   | 'Warehouse Manager'
+  | 'Store Operator'
   | 'Staff'
   | 'Super Admin'
   | 'Procurement Manager'
@@ -12,6 +15,18 @@ export type UserRole =
   | 'Quality Inspector'
   | 'Auditor';
 
+export interface UserPermissions {
+  canReceiveStock: boolean;
+  canDispatchStock: boolean;
+  canEditOwnTransactions: boolean;
+  canCancelOwnTransactions: boolean;
+  canManageUsers: boolean;
+  canViewAllWarehouses: boolean;
+  canViewStockValuation: boolean;
+  canExportReports: boolean;
+  canViewZeroStockAlerts: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -19,9 +34,14 @@ export interface User {
   role: UserRole;
   password?: string;
   department?: string;
-  assignedWarehouseId?: string; // e.g. 'WH-001' or undefined for Admin
+  assignedWarehouseId?: string; // e.g. 'WH-001' or 'ALL'
+  assignedWarehouseIds?: string[]; // Multiple store assignments
+  assignedResponsibilities?: string;
+  permissions?: UserPermissions;
   active: boolean;
   lastLogin?: string;
+  customAccessLink?: string;
+  token?: string;
 }
 
 export interface Item {
@@ -138,7 +158,7 @@ export interface Customer {
   active: boolean;
 }
 
-// 4. Incoming Stock Transaction (Exact fields required by user prompt)
+// 4. Incoming Stock Transaction (with edit, cancel, and reversal tracking)
 export interface IncomingStockTransaction {
   id: string;
   date: string;
@@ -155,9 +175,16 @@ export interface IncomingStockTransaction {
   totalCostUSD: number;
   createdByUser: string;
   createdAt: string;
+  status?: 'active' | 'cancelled' | 'corrected';
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  editHistory?: Array<{ timestamp: string; user: string; reason?: string; changes: string }>;
 }
 
-// 5. Outgoing Stock Transaction (Exact fields required by user prompt)
+// 5. Outgoing Stock Transaction (with edit, cancel, and reversal tracking)
 export interface OutgoingStockTransaction {
   id: string;
   dateIssued: string;
@@ -176,6 +203,30 @@ export interface OutgoingStockTransaction {
   createdByUser: string;
   isAdminOverride?: boolean;
   createdAt: string;
+  status?: 'active' | 'cancelled' | 'corrected';
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  editHistory?: Array<{ timestamp: string; user: string; reason?: string; changes: string }>;
+}
+
+export interface ItemLedgerEntry {
+  id: string;
+  timestamp: string;
+  date: string;
+  type: 'Opening' | 'Stock IN' | 'Stock OUT' | 'Adjustment' | 'Transfer' | 'Cancelled IN' | 'Cancelled OUT';
+  reference: string;
+  warehouseId: string;
+  warehouseName: string;
+  party: string;
+  quantityIn: number;
+  quantityOut: number;
+  runningBalance: number;
+  operator: string;
+  status: 'active' | 'cancelled';
+  notes?: string;
 }
 
 // 6. Shipment Tracker

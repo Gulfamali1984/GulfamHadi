@@ -1241,7 +1241,7 @@
       "name": "Dawood Zafar",
       "email": "dawoodzafar1984@gmail.com",
       "role": "Admin",
-      "password": "admin",
+      "password": "gulfam12345",
       "department": "Executive Operations",
       "active": true,
       "lastLogin": "2026-10-17 10:45"
@@ -1255,7 +1255,7 @@
       "department": "TLS Warehouse Operations",
       "assignedWarehouseId": "WH-001",
       "active": true,
-      "lastLogin": "2026-10-17 09:15"
+      "lastLogin": "2026-10-21 14:06"
     },
     {
       "id": "USR-003",
@@ -1358,6 +1358,19 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "LOG-MVI6QFL9-460",
+      "timestamp": "2026-10-21 14:06:04",
+      "userId": "USR-002",
+      "userName": "Imtiaz",
+      "userRole": "Warehouse Manager",
+      "action": "USER_LOGIN",
+      "module": "Authentication",
+      "entityType": "User",
+      "entityId": "USR-002",
+      "entityCode": "imtiaz.tls@realdeals.com",
+      "details": "User Imtiaz logged in (Warehouse Manager)"
+    },
     {
       "id": "LOG-MVEYBXVU-198",
       "timestamp": "2026-10-19 07:47:33",

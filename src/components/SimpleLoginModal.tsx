@@ -4,23 +4,24 @@ import {
   Shield,
   Key,
   Mail,
-  CheckCircle2,
   AlertCircle,
   X,
   UserCheck,
-  Building2,
   Lock,
-  ArrowRight,
-  Sparkles
+  ShieldAlert,
+  LogIn,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 interface SimpleLoginModalProps {
-  currentUser: User;
+  currentUser: User | null;
   users: User[];
   warehouses: Warehouse[];
   onSelectUser: (user: User) => void;
   onLoginWithCredentials: (email: string, password?: string) => Promise<boolean>;
   onClose: () => void;
+  isMandatory?: boolean;
 }
 
 export const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({
@@ -29,324 +30,229 @@ export const SimpleLoginModal: React.FC<SimpleLoginModalProps> = ({
   warehouses,
   onSelectUser,
   onLoginWithCredentials,
-  onClose
+  onClose,
+  isMandatory = false
 }) => {
-  const [activeTab, setActiveTab] = useState<'warehouses' | 'manual'>('warehouses');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleManualLogin = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (!emailInput.trim()) {
-      setErrorMsg('Please enter your email address.');
+    const cleanEmail = emailInput.trim();
+    if (!cleanEmail) {
+      setErrorMsg('Please enter your email or Login ID.');
+      return;
+    }
+    if (!passwordInput) {
+      setErrorMsg('Password is required to access this ERP system.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const ok = await onLoginWithCredentials(emailInput.trim(), passwordInput);
+      const ok = await onLoginWithCredentials(cleanEmail, passwordInput);
       if (ok) {
-        onClose();
+        if (!isMandatory) onClose();
       } else {
-        setErrorMsg('Invalid email or password. Please verify your credentials.');
+        setErrorMsg('Invalid login credentials or incorrect password. Only authorized accounts created by Administrator are permitted.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Login failed.');
+      setErrorMsg(err.message || 'Authentication failed. Please check your password.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleQuickSwitch = (u: User) => {
-    onSelectUser(u);
-    onClose();
-  };
-
-  // Admin user
-  const adminUser = users.find(u => u.role === 'Admin') || {
-    id: 'USR-001',
-    name: 'Dawood Zafar',
-    email: 'dawoodzafar1984@gmail.com',
-    role: 'Admin' as const,
-    password: 'admin',
-    active: true
+  const handleFillLoginId = (email: string) => {
+    setEmailInput(email);
+    setPasswordInput('');
+    setErrorMsg('');
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full my-8 overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${
+        isMandatory
+          ? 'bg-slate-950/95 backdrop-blur-md'
+          : 'bg-slate-900/60 backdrop-blur-xs'
+      }`}
+    >
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full my-auto overflow-hidden text-slate-800 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center">
-              <Shield className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">Real Deals ERP Authentication</h3>
-              <p className="text-[11px] text-slate-500">
-                Sign in as Administrator or Warehouse Responsible (All 9 Facilities)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Currently Active Banner */}
-        <div className="px-6 pt-4">
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center">
-                {currentUser.name.charAt(0)}
+        <div className="px-6 py-5 border-b border-slate-800 bg-slate-900 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/10 text-white border border-white/20 flex items-center justify-center font-bold text-sm tracking-wider shadow-inner">
+                RD
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900">{currentUser.name}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                      currentUser.role === 'Admin'
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-blue-100 text-blue-800 border border-blue-200'
-                    }`}
-                  >
-                    {currentUser.role}
+                  <h3 className="font-bold text-white text-base leading-tight">
+                    Real Deals ERP
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    Password Protected
                   </span>
                 </div>
-                <span className="text-[11px] text-slate-500 block">
-                  {currentUser.role === 'Admin'
-                    ? 'Global Administrator (All 9 Warehouses)'
-                    : `Store Isolated: ${currentUser.assignedWarehouseId || 'Assigned Store'}`}
-                </span>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Procurement, Logistics &amp; Warehouse ERP
+                </p>
               </div>
             </div>
-            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Active</span>
-            </span>
-          </div>
-        </div>
 
-        {/* Tab Toggle */}
-        <div className="px-6 pt-4">
-          <div className="flex border-b border-slate-200 gap-4 text-xs font-semibold">
-            <button
-              onClick={() => setActiveTab('warehouses')}
-              className={`pb-2.5 transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'warehouses'
-                  ? 'border-b-2 border-slate-900 text-slate-900 font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Warehouse Logins (9 Stores)</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('manual')}
-              className={`pb-2.5 transition-colors cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'manual'
-                  ? 'border-b-2 border-slate-900 text-slate-900 font-bold'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Email &amp; Password Sign In</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tab 1: 9 Warehouse Logins */}
-        {activeTab === 'warehouses' && (
-          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-            {/* Administrator Quick Login Card */}
-            <div className="p-3.5 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
-                    Super Admin
-                  </span>
-                  <span className="text-xs font-bold">{adminUser.name}</span>
-                </div>
-                <p className="text-[11px] text-slate-300 mt-0.5">
-                  Full system control • All 9 stores • User creation • Google Sheets configuration
-                </p>
-                <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                  Email: {adminUser.email} • Password: admin
-                </p>
-              </div>
+            {!isMandatory && (
               <button
-                onClick={() => handleQuickSwitch(adminUser)}
-                className="px-3.5 py-1.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs transition-colors shrink-0 cursor-pointer self-start sm:self-auto flex items-center gap-1.5"
+                onClick={onClose}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                title="Close"
               >
-                <span>Sign In as Admin</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <X className="w-5 h-5" />
               </button>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Warehouse Responsible Logins (Grid of 9) */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                  Store Responsible Persons (All 9 Facilities)
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">Password for all: <strong>password</strong></span>
-              </div>
+        {/* Security Notice */}
+        <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-start gap-2.5 text-xs text-slate-700">
+          <ShieldAlert className="w-4 h-4 text-slate-900 mt-0.5 shrink-0" />
+          <p className="leading-relaxed">
+            <strong>Restricted Access:</strong> Enter your administrator-assigned Login ID and password to access warehouse records, stock, and dispatches.
+          </p>
+        </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {warehouses.map(wh => {
-                  const managerUser = users.find(u => u.assignedWarehouseId === wh.id) || {
-                    id: `USR-${wh.id}`,
-                    name: wh.managerName,
-                    email: `${wh.code.toLowerCase()}@realdeals.com`,
-                    role: 'Warehouse Manager' as const,
-                    assignedWarehouseId: wh.id,
-                    active: true
-                  };
-
-                  const isCurrent = currentUser.id === managerUser.id;
-
-                  return (
-                    <div
-                      key={wh.id}
-                      className={`p-3 rounded-xl border text-xs flex flex-col justify-between transition-all ${
-                        isCurrent
-                          ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500'
-                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+        {/* Currently Active Banner (if switching account) */}
+        {!isMandatory && currentUser && (
+          <div className="px-6 pt-4">
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center">
+                  {currentUser.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900">{currentUser.name}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        currentUser.role === 'Admin'
+                          ? 'bg-slate-900 text-white'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
                       }`}
                     >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-[10px] font-bold text-slate-500">{wh.id}</span>
-                          <span className="font-bold text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-800">
-                            {wh.code}
-                          </span>
-                        </div>
-                        <p className="font-bold text-slate-900 text-xs truncate" title={wh.name}>
-                          {wh.name}
-                        </p>
-                        <p className="text-[11px] text-slate-500 truncate" title={wh.location}>
-                          {wh.location}
-                        </p>
-                        <div className="mt-2 pt-2 border-t border-slate-100">
-                          <span className="text-[10px] font-semibold text-slate-600 block">Responsible:</span>
-                          <span className="text-xs font-bold text-slate-900 block truncate">
-                            {wh.managerName || managerUser.name}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-mono block truncate mt-0.5">
-                            {managerUser.email}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleQuickSwitch(managerUser)}
-                        className={`w-full mt-3 py-1.5 px-2 rounded-lg font-bold text-[11px] transition-colors cursor-pointer flex items-center justify-center gap-1 ${
-                          isCurrent
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                        }`}
-                      >
-                        {isCurrent ? (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Logged In</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Log In</span>
-                            <ArrowRight className="w-3 h-3" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  );
-                })}
+                      {currentUser.role}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block">
+                    {currentUser.email}
+                  </span>
+                </div>
               </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-900 flex items-start gap-2">
-              <Lock className="w-3.5 h-3.5 text-blue-700 shrink-0 mt-0.5" />
-              <div>
-                <strong>Store Isolated Mode Notice:</strong> Each warehouse manager can only perform transactions (incoming, outgoing, closing balance) in their assigned facility and cannot operate or alter other stores.
-              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Active</span>
+              </span>
             </div>
           </div>
         )}
 
-        {/* Tab 2: Manual Email & Password Login Form */}
-        {activeTab === 'manual' && (
-          <form onSubmit={handleManualLogin} className="p-6 space-y-4">
-            {errorMsg && (
-              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Address:
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={emailInput}
-                  onChange={e => setEmailInput(e.target.value)}
-                  placeholder="e.g. dawoodzafar1984@gmail.com or imtiaz.tls@realdeals.com"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
+        {/* Login Form */}
+        <form onSubmit={handleLoginSubmit} className="p-6 space-y-4">
+          {errorMsg && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{errorMsg}</span>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Password:
-              </label>
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={passwordInput}
-                  onChange={e => setPasswordInput(e.target.value)}
-                  placeholder="Enter password ('admin' or 'password')"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-900"
-                />
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Login ID / Email Address:
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="email"
+                required
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                placeholder="dawoodzafar1984@gmail.com or imtiaz.tls@realdeals.com"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all"
+                autoFocus
+              />
             </div>
+          </div>
 
-            <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
-              <p className="font-semibold text-slate-800">Quick Test Credentials:</p>
-              <p>• <strong>Administrator:</strong> dawoodzafar1984@gmail.com / <span className="font-mono">admin</span></p>
-              <p>• <strong>TLS Warehouse (USA):</strong> imtiaz.tls@realdeals.com / <span className="font-mono">password</span></p>
-              <p>• <strong>TOLL Warehouse (UAE):</strong> anoop.toll@realdeals.com / <span className="font-mono">password</span></p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Account Password:
+            </label>
+            <div className="relative">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                placeholder="Enter password"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-10 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          {/* Quick Login ID Helpers (Click to fill Login ID) */}
+          <div className="pt-2">
+            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
+              Select Login ID:
+            </span>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => handleFillLoginId('dawoodzafar1984@gmail.com')}
+                className="px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                dawoodzafar1984@gmail.com (Admin)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillLoginId('imtiaz.tls@realdeals.com')}
+                className="px-2.5 py-1 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-[11px] font-medium transition-colors cursor-pointer"
+              >
+                imtiaz.tls@realdeals.com (TLS Store)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+            {!isMandatory && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                className="px-4 py-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {isSubmitting ? 'Authenticating...' : 'Sign In'}
-              </button>
-            </div>
-          </form>
-        )}
+            )}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-2.5 px-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>{isSubmitting ? 'Verifying Password...' : 'Sign In to ERP System'}</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -153,116 +153,240 @@ export const INITIAL_WAREHOUSES: Warehouse[] = [
   }
 ];
 
-// 2. Initial Users with Roles: Admin, Warehouse Manager, Staff (All 9 Warehouses)
+// 2. Initial Users with Roles: Admin, Sales (Read Only), Stock IN, Stock OUT, and Store Managers
 export const INITIAL_USERS: User[] = [
   {
     id: 'USR-001',
     name: 'Dawood Zafar',
     email: 'dawoodzafar1984@gmail.com',
     role: 'Admin',
-    password: 'admin',
+    password: 'gulfam12345',
     department: 'Executive Operations',
+    assignedWarehouseId: 'ALL',
+    assignedWarehouseIds: ['WH-001', 'WH-002', 'WH-003', 'WH-004', 'WH-005', 'WH-006', 'WH-007', 'WH-008', 'WH-009'],
+    assignedResponsibilities: 'Full ERP Administrative and System Control across all 9 facilities',
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: true,
+      canViewAllWarehouses: true,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 09:45'
+    lastLogin: '2026-10-21 09:45'
   },
   {
     id: 'USR-002',
+    name: 'Zainab Tariq',
+    email: 'sales@realdeals.com',
+    role: 'Sales & Project Team (Read Only)',
+    password: 'password',
+    department: 'Sales & Projects Division',
+    assignedWarehouseId: 'ALL',
+    assignedResponsibilities: 'Product searching, inventory availability lookups, project quotations',
+    permissions: {
+      canReceiveStock: false,
+      canDispatchStock: false,
+      canEditOwnTransactions: false,
+      canCancelOwnTransactions: false,
+      canManageUsers: false,
+      canViewAllWarehouses: true,
+      canViewStockValuation: false,
+      canExportReports: true,
+      canViewZeroStockAlerts: false
+    },
+    active: true,
+    lastLogin: '2026-10-21 08:30'
+  },
+  {
+    id: 'USR-003',
+    name: 'Rashid Khan',
+    email: 'receiving.tls@realdeals.com',
+    role: 'Stock IN / Receiving Operator',
+    password: 'password',
+    department: 'Inbound Receiving',
+    assignedWarehouseId: 'WH-001',
+    assignedWarehouseIds: ['WH-001'],
+    assignedResponsibilities: 'Recording incoming supplier shipments, physical count inspection, serial number logging for TLS facility',
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: false,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: false,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
+    active: true,
+    lastLogin: '2026-10-21 08:45'
+  },
+  {
+    id: 'USR-004',
+    name: 'Farhan Ali',
+    email: 'dispatch.tls@realdeals.com',
+    role: 'Stock OUT / Dispatch Operator',
+    password: 'password',
+    department: 'Outbound Logistics',
+    assignedWarehouseId: 'WH-001',
+    assignedWarehouseIds: ['WH-001'],
+    assignedResponsibilities: 'Customer dispatch fulfillment, packing slip generation, and order release from TLS store',
+    permissions: {
+      canReceiveStock: false,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: false,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
+    active: true,
+    lastLogin: '2026-10-21 07:50'
+  },
+  {
+    id: 'USR-005',
     name: 'Imtiaz',
     email: 'imtiaz.tls@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'TLS Operations',
     assignedWarehouseId: 'WH-001',
+    assignedWarehouseIds: ['WH-001'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 08:30'
+    lastLogin: '2026-10-20 18:20'
   },
   {
-    id: 'USR-003',
+    id: 'USR-006',
     name: 'Anoop',
     email: 'anoop.toll@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'TOLL Operations',
     assignedWarehouseId: 'WH-002',
+    assignedWarehouseIds: ['WH-002'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 08:45'
+    lastLogin: '2026-10-20 08:45'
   },
   {
-    id: 'USR-004',
+    id: 'USR-007',
     name: 'Santhosh',
     email: 'santhosh.snt@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'SNT Operations',
     assignedWarehouseId: 'WH-003',
+    assignedWarehouseIds: ['WH-003'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 07:50'
+    lastLogin: '2026-10-20 07:50'
   },
   {
-    id: 'USR-005',
+    id: 'USR-008',
     name: 'Denial',
     email: 'denial.bflo@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'BFLO Operations',
     assignedWarehouseId: 'WH-004',
+    assignedWarehouseIds: ['WH-004'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-17 18:20'
+    lastLogin: '2026-10-20 18:20'
   },
   {
-    id: 'USR-006',
+    id: 'USR-009',
     name: 'John Miller',
     email: 'john.usa@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'USA Regional Store',
     assignedWarehouseId: 'WH-005',
+    assignedWarehouseIds: ['WH-005'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 07:10'
+    lastLogin: '2026-10-20 07:10'
   },
   {
-    id: 'USR-007',
-    name: 'Noorisha',
-    email: 'noorisha.nmk@realdeals.com',
-    role: 'Warehouse Manager',
-    password: 'password',
-    department: 'NMK Operations',
-    assignedWarehouseId: 'WH-006',
-    active: true,
-    lastLogin: '2026-10-18 09:10'
-  },
-  {
-    id: 'USR-008',
-    name: 'Store In-Charge',
-    email: 'ajman.store@realdeals.com',
-    role: 'Warehouse Manager',
-    password: 'password',
-    department: 'Ajman Operations',
-    assignedWarehouseId: 'WH-007',
-    active: true,
-    lastLogin: '2026-10-17 15:30'
-  },
-  {
-    id: 'USR-009',
+    id: 'USR-010',
     name: 'Gulfam',
     email: 'gulfam.pak@realdeals.com',
     role: 'Warehouse Manager',
     password: 'password',
     department: 'PAK Operations',
     assignedWarehouseId: 'WH-008',
+    assignedWarehouseIds: ['WH-008'],
+    permissions: {
+      canReceiveStock: true,
+      canDispatchStock: true,
+      canEditOwnTransactions: true,
+      canCancelOwnTransactions: true,
+      canManageUsers: false,
+      canViewAllWarehouses: false,
+      canViewStockValuation: true,
+      canExportReports: true,
+      canViewZeroStockAlerts: true
+    },
     active: true,
-    lastLogin: '2026-10-18 08:15'
-  },
-  {
-    id: 'USR-010',
-    name: 'Asif',
-    email: 'asif.ksa@realdeals.com',
-    role: 'Warehouse Manager',
-    password: 'password',
-    department: 'KSA Operations',
-    assignedWarehouseId: 'WH-009',
-    active: true,
-    lastLogin: '2026-10-18 09:00'
+    lastLogin: '2026-10-21 08:15'
   }
 ];
 
@@ -435,17 +559,38 @@ export const INITIAL_ITEMS: Item[] = [
     defaultLeadTimeDays: 14,
     createdAt: '2026-03-20',
     updatedAt: '2026-10-09'
+  },
+  {
+    id: 'ITEM-PM8244',
+    sku: 'SCH-METSEPM8244',
+    oemPartNumber: 'METSEPM8244',
+    brand: 'Schneider Electric',
+    description: 'PowerLogic PM8244 Power & Energy Meter, 3-Phase, RS485 & Dual Ethernet Port',
+    category: 'Power Meter',
+    condition: 'Factory Sealed New',
+    unit: 'PCS',
+    costPriceUSD: 1850.00,
+    sellingPriceUSD: 2480.00,
+    weightKg: 0.55,
+    hsCode: '9030.31.00',
+    countryOfOrigin: 'France',
+    minSafetyStock: 2,
+    reorderPoint: 4,
+    targetStockLevel: 10,
+    defaultLeadTimeDays: 10,
+    createdAt: '2026-10-01',
+    updatedAt: '2026-10-07'
   }
 ];
 
-// 4. Initial Inventory distribution across the 9 warehouses
+// 4. Initial Inventory distribution across the 9 warehouses (reservedStock = 0 by default to fix zero-stock bug)
 export const INITIAL_INVENTORY: InventoryRecord[] = [
   // ITEM-001 (Siemens CPU 1515)
-  { id: 'INV-001', itemId: 'ITEM-001', warehouseId: 'WH-001', binLocation: 'Shelf A-01', physicalStock: 5, reservedStock: 1, availableStock: 4, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
+  { id: 'INV-001', itemId: 'ITEM-001', warehouseId: 'WH-001', binLocation: 'Shelf A-01', physicalStock: 5, reservedStock: 0, availableStock: 5, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
   { id: 'INV-002', itemId: 'ITEM-001', warehouseId: 'WH-002', binLocation: 'Rack B-03', physicalStock: 4, reservedStock: 0, availableStock: 4, inTransitStock: 2, quarantinedStock: 0, lastCountDate: '2026-10-14', updatedAt: '2026-10-14' },
   { id: 'INV-003', itemId: 'ITEM-001', warehouseId: 'WH-003', binLocation: 'Bay 12-A', physicalStock: 2, reservedStock: 0, availableStock: 2, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-12', updatedAt: '2026-10-12' },
   { id: 'INV-004', itemId: 'ITEM-001', warehouseId: 'WH-004', binLocation: 'Sec 4-B', physicalStock: 3, reservedStock: 0, availableStock: 3, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-10', updatedAt: '2026-10-10' },
-  { id: 'INV-005', itemId: 'ITEM-001', warehouseId: 'WH-007', binLocation: 'Row 02-C', physicalStock: 3, reservedStock: 1, availableStock: 2, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-11', updatedAt: '2026-10-11' },
+  { id: 'INV-005', itemId: 'ITEM-001', warehouseId: 'WH-007', binLocation: 'Row 02-C', physicalStock: 2, reservedStock: 0, availableStock: 2, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-11', updatedAt: '2026-10-11' },
 
   // ITEM-002 (ControlLogix 5580)
   { id: 'INV-006', itemId: 'ITEM-002', warehouseId: 'WH-001', binLocation: 'Safe Vault-01', physicalStock: 3, reservedStock: 0, availableStock: 3, inTransitStock: 1, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
@@ -454,7 +599,7 @@ export const INITIAL_INVENTORY: InventoryRecord[] = [
   { id: 'INV-009', itemId: 'ITEM-002', warehouseId: 'WH-006', binLocation: 'Shelf 01', physicalStock: 1, reservedStock: 0, availableStock: 1, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-13', updatedAt: '2026-10-13' },
 
   // ITEM-003 (Siemens G120 PM240-2)
-  { id: 'INV-010', itemId: 'ITEM-003', warehouseId: 'WH-001', binLocation: 'Heavy Rack-A', physicalStock: 6, reservedStock: 2, availableStock: 4, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-14', updatedAt: '2026-10-14' },
+  { id: 'INV-010', itemId: 'ITEM-003', warehouseId: 'WH-001', binLocation: 'Heavy Rack-A', physicalStock: 4, reservedStock: 0, availableStock: 4, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-14', updatedAt: '2026-10-14' },
   { id: 'INV-011', itemId: 'ITEM-003', warehouseId: 'WH-002', binLocation: 'Pallet 04', physicalStock: 4, reservedStock: 0, availableStock: 4, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-13', updatedAt: '2026-10-13' },
   { id: 'INV-012', itemId: 'ITEM-003', warehouseId: 'WH-003', binLocation: 'Rack D-02', physicalStock: 3, reservedStock: 0, availableStock: 3, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-11', updatedAt: '2026-10-11' },
   { id: 'INV-013', itemId: 'ITEM-003', warehouseId: 'WH-008', binLocation: 'Bay 03-C', physicalStock: 2, reservedStock: 0, availableStock: 2, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-10', updatedAt: '2026-10-10' },
@@ -464,13 +609,13 @@ export const INITIAL_INVENTORY: InventoryRecord[] = [
   { id: 'INV-015', itemId: 'ITEM-004', warehouseId: 'WH-002', binLocation: 'Zone C-04', physicalStock: 1, reservedStock: 0, availableStock: 1, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-11', updatedAt: '2026-10-11' },
 
   // ITEM-005 (Allen-Bradley 1756-IB16)
-  { id: 'INV-016', itemId: 'ITEM-005', warehouseId: 'WH-001', binLocation: 'Bin C-12', physicalStock: 14, reservedStock: 2, availableStock: 12, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
+  { id: 'INV-016', itemId: 'ITEM-005', warehouseId: 'WH-001', binLocation: 'Bin C-12', physicalStock: 12, reservedStock: 0, availableStock: 12, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
   { id: 'INV-017', itemId: 'ITEM-005', warehouseId: 'WH-002', binLocation: 'Bin 08-A', physicalStock: 10, reservedStock: 0, availableStock: 10, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-14', updatedAt: '2026-10-14' },
   { id: 'INV-018', itemId: 'ITEM-005', warehouseId: 'WH-003', binLocation: 'Small Parts-1', physicalStock: 6, reservedStock: 0, availableStock: 6, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-12', updatedAt: '2026-10-12' },
   { id: 'INV-019', itemId: 'ITEM-005', warehouseId: 'WH-006', binLocation: 'Box 04', physicalStock: 4, reservedStock: 0, availableStock: 4, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-10', updatedAt: '2026-10-10' },
 
   // ITEM-006 (Siemens ET 200SP AI)
-  { id: 'INV-020', itemId: 'ITEM-006', warehouseId: 'WH-001', binLocation: 'Drawer 02', physicalStock: 18, reservedStock: 3, availableStock: 15, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
+  { id: 'INV-020', itemId: 'ITEM-006', warehouseId: 'WH-001', binLocation: 'Drawer 02', physicalStock: 15, reservedStock: 0, availableStock: 15, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-15', updatedAt: '2026-10-15' },
   { id: 'INV-021', itemId: 'ITEM-006', warehouseId: 'WH-002', binLocation: 'Drawer 05', physicalStock: 12, reservedStock: 0, availableStock: 12, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-13', updatedAt: '2026-10-13' },
   { id: 'INV-022', itemId: 'ITEM-006', warehouseId: 'WH-007', binLocation: 'Cabinet A', physicalStock: 8, reservedStock: 0, availableStock: 8, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-11', updatedAt: '2026-10-11' },
 
@@ -480,7 +625,10 @@ export const INITIAL_INVENTORY: InventoryRecord[] = [
   // ITEM-008 (Omron CP1E)
   { id: 'INV-024', itemId: 'ITEM-008', warehouseId: 'WH-001', binLocation: 'Shelf B-04', physicalStock: 7, reservedStock: 0, availableStock: 7, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-14', updatedAt: '2026-10-14' },
   { id: 'INV-025', itemId: 'ITEM-008', warehouseId: 'WH-003', binLocation: 'Shelf 03', physicalStock: 5, reservedStock: 0, availableStock: 5, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-12', updatedAt: '2026-10-12' },
-  { id: 'INV-026', itemId: 'ITEM-008', warehouseId: 'WH-006', binLocation: 'Bin 12', physicalStock: 3, reservedStock: 0, availableStock: 3, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-10', updatedAt: '2026-10-10' }
+  { id: 'INV-026', itemId: 'ITEM-008', warehouseId: 'WH-006', binLocation: 'Bin 12', physicalStock: 3, reservedStock: 0, availableStock: 3, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-10', updatedAt: '2026-10-10' },
+
+  // ITEM-PM8244 (METSEPM8244 - Opening 20 + IN 10 - OUT 12 - OUT 18 = exactly 0 pcs Out of Stock)
+  { id: 'INV-PM8244-01', itemId: 'ITEM-PM8244', warehouseId: 'WH-001', binLocation: 'Rack D-04', physicalStock: 0, reservedStock: 0, availableStock: 0, inTransitStock: 0, quarantinedStock: 0, lastCountDate: '2026-10-07', updatedAt: '2026-10-07' }
 ];
 
 // 5. Initial Incoming Stock Transactions (Exact 9 fields from user prompt)
@@ -500,6 +648,7 @@ export const INITIAL_INCOMING_TRANSACTIONS: IncomingStockTransaction[] = [
     unitCost: 2450.00,
     totalCostUSD: 4900.00,
     createdByUser: 'Imtiaz',
+    status: 'active',
     createdAt: '2026-10-15 14:22'
   },
   {
@@ -517,6 +666,7 @@ export const INITIAL_INCOMING_TRANSACTIONS: IncomingStockTransaction[] = [
     unitCost: 4200.00,
     totalCostUSD: 4200.00,
     createdByUser: 'Anoop',
+    status: 'active',
     createdAt: '2026-10-14 11:05'
   },
   {
@@ -534,6 +684,7 @@ export const INITIAL_INCOMING_TRANSACTIONS: IncomingStockTransaction[] = [
     unitCost: 1120.00,
     totalCostUSD: 3360.00,
     createdByUser: 'Santhosh',
+    status: 'active',
     createdAt: '2026-10-13 16:40'
   },
   {
@@ -551,7 +702,26 @@ export const INITIAL_INCOMING_TRANSACTIONS: IncomingStockTransaction[] = [
     unitCost: 410.00,
     totalCostUSD: 1640.00,
     createdByUser: 'Tariq',
+    status: 'active',
     createdAt: '2026-10-12 10:15'
+  },
+  {
+    id: 'INC-2026-0005',
+    date: '2026-10-03',
+    trackingNo: 'SHP-001',
+    itemCode: 'METSEPM8244',
+    serialNumber: 'PM-882190 to PM-882199',
+    warehouseId: 'WH-001',
+    warehouseCode: 'TLS-USA',
+    warehouseName: 'Main Warehouse (TLS, USA)',
+    supplier: 'Schneider Electric Industrial Controls',
+    quantityReceived: 10,
+    itemDescription: 'PowerLogic PM8244 Power & Energy Meter, 3-Phase, RS485 & Dual Ethernet Port',
+    unitCost: 1850.00,
+    totalCostUSD: 18500.00,
+    createdByUser: 'Imtiaz',
+    status: 'active',
+    createdAt: '2026-10-03 10:15'
   }
 ];
 
@@ -574,6 +744,7 @@ export const INITIAL_OUTGOING_TRANSACTIONS: OutgoingStockTransaction[] = [
     totalPriceUSD: 3680.00,
     createdByUser: 'Imtiaz',
     isAdminOverride: false,
+    status: 'active',
     createdAt: '2026-10-16 11:30'
   },
   {
@@ -593,6 +764,7 @@ export const INITIAL_OUTGOING_TRANSACTIONS: OutgoingStockTransaction[] = [
     totalPriceUSD: 1360.00,
     createdByUser: 'Anoop',
     isAdminOverride: false,
+    status: 'active',
     createdAt: '2026-10-15 15:45'
   },
   {
@@ -612,7 +784,48 @@ export const INITIAL_OUTGOING_TRANSACTIONS: OutgoingStockTransaction[] = [
     totalPriceUSD: 1790.00,
     createdByUser: 'Santhosh',
     isAdminOverride: false,
+    status: 'active',
     createdAt: '2026-10-14 09:20'
+  },
+  {
+    id: 'OUT-2026-0004',
+    dateIssued: '2026-10-05',
+    itemCode: 'METSEPM8244',
+    trackingNo: 'DSP-001',
+    serialNumber: 'PM-882190 to PM-882195',
+    warehouseId: 'WH-001',
+    warehouseCode: 'TLS-USA',
+    warehouseName: 'Main Warehouse (TLS, USA)',
+    customerOrWarehouse: 'Saudi Aramco Refinery Project',
+    quantityIssued: 12,
+    poNumber: 'PO-SAR-9940',
+    itemDescription: 'PowerLogic PM8244 Power & Energy Meter, 3-Phase',
+    unitPriceUSD: 2480.00,
+    totalPriceUSD: 29760.00,
+    createdByUser: 'Imtiaz',
+    isAdminOverride: false,
+    status: 'active',
+    createdAt: '2026-10-05 11:20'
+  },
+  {
+    id: 'OUT-2026-0005',
+    dateIssued: '2026-10-07',
+    itemCode: 'METSEPM8244',
+    trackingNo: 'DSP-002',
+    serialNumber: 'PM-882196 to PM-882199',
+    warehouseId: 'WH-001',
+    warehouseCode: 'TLS-USA',
+    warehouseName: 'Main Warehouse (TLS, USA)',
+    customerOrWarehouse: 'SABIC Petrochemical Plant',
+    quantityIssued: 18,
+    poNumber: 'PO-SAB-8812',
+    itemDescription: 'PowerLogic PM8244 Power & Energy Meter, 3-Phase',
+    unitPriceUSD: 2480.00,
+    totalPriceUSD: 44640.00,
+    createdByUser: 'Imtiaz',
+    isAdminOverride: false,
+    status: 'active',
+    createdAt: '2026-10-07 14:45'
   }
 ];
 
